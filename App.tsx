@@ -13,7 +13,7 @@ import { authService } from './services/authService';
 import { trialService } from './services/trialService';
 
 // ─── Gumroad product checkout ─────────────────────────────────────────────────
-const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl';
+const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl?wanted=true';
 
 // ─── URL ↔ AppState mapping ────────────────────────────────────────────────────
 const STATE_TO_PATH: Partial<Record<GameState, string>> = {

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Copy, CheckCheck, Gift, Users } from 'lucide-react';
 
 const DISCOUNT_CODE = '30HAFED30';
-const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl';
+const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl?wanted=true';
 
 export const ReferralBanner: React.FC = () => {
     const [copied, setCopied] = useState(false);
@@ -77,7 +77,7 @@ export const ReferralBanner: React.FC = () => {
 
                     {/* Share link */}
                     <a
-                        href={`${GUMROAD_URL}?discount_code=${DISCOUNT_CODE}`}
+                        href={`${GUMROAD_URL}&discount_code=${DISCOUNT_CODE}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs

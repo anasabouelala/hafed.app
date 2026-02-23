@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Zap, Gamepad2, Mic, ExternalLink } from 'lucide-react';
 import { trialService } from '../../services/trialService';
 
-const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl';
+const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl?wanted=true';
 
 interface TrialBannerProps {
     onUpgrade: () => void;
