@@ -8,6 +8,7 @@ interface Props {
     surahName: string;
     question: Question;
     onGameEnd: (victory: boolean, score?: number) => void;
+    onExit: () => void;
 }
 
 interface GameItem {
@@ -19,7 +20,7 @@ interface GameItem {
     spawnTime: number;
 }
 
-export const VerseSurferGame: React.FC<Props> = ({ surahName, question, onGameEnd }) => {
+export const VerseSurferGame: React.FC<Props> = ({ surahName, question, onGameEnd, onExit }) => {
     // Game State (React for UI)
     const [isPlaying, setIsPlaying] = useState(false);
     const [isGameOver, setIsGameOver] = useState(false);
@@ -307,6 +308,17 @@ export const VerseSurferGame: React.FC<Props> = ({ surahName, question, onGameEn
     if (!isPlaying && !isGameOver) {
         return (
             <div className="absolute inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center p-6 text-center">
+                {/* --- EXIT BUTTON (START SCREEN) --- */}
+                <button
+                    onClick={onExit}
+                    className="absolute top-6 left-6 group flex items-center justify-center w-12 h-12 rounded-full bg-slate-800/50 backdrop-blur-md border border-white/10 hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300 shadow-lg"
+                    title="Exit Game"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-red-400 transition-colors">
+                        <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                    </svg>
+                </button>
+
                 <div className="w-24 h-24 rounded-full bg-arcade-cyan/20 flex items-center justify-center mb-6 animate-pulse">
                     <ChevronUp className="w-12 h-12 text-arcade-cyan" />
                 </div>
@@ -377,6 +389,16 @@ export const VerseSurferGame: React.FC<Props> = ({ surahName, question, onGameEn
                 <span className="text-xs font-mono w-8 text-center">{speedFactor}x</span>
             </div>
 
+            {/* --- EXIT BUTTON --- */}
+            <button
+                onClick={onExit}
+                className="absolute top-20 left-4 z-50 group flex items-center justify-center w-10 h-10 rounded-full bg-slate-800/80 backdrop-blur-md border border-slate-600 hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300 shadow-lg"
+                title="Exit Game"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-red-400 transition-colors">
+                    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                </svg>
+            </button>
             {/* --- GAME WORLD --- */}
             <div className="relative flex-1 w-full max-w-2xl mx-auto border-x-2 border-slate-800 bg-slate-900 perspective-1000 overflow-hidden">
 
@@ -451,6 +473,6 @@ export const VerseSurferGame: React.FC<Props> = ({ surahName, question, onGameEn
 
             </div>
 
-        </div>
+        </div >
     );
 };

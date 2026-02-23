@@ -455,13 +455,13 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
     return null; // Safety guard for batch transitions
   }
 
-  // Full screen modes
   if (gameMode === 'SURF') {
     return (
       <VerseSurferGame
         question={currentQuestion}
         surahName={surahName}
         onGameEnd={(victory, score) => handleAnswer(victory, score)}
+        onExit={handleGameExit}
       />
     );
   }
