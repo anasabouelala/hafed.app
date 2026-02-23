@@ -16,7 +16,7 @@ import { trialService } from './services/trialService';
 const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl';
 
 // ─── URL ↔ AppState mapping ────────────────────────────────────────────────────
-const STATE_TO_PATH: Record<GameState, string> = {
+const STATE_TO_PATH: Partial<Record<GameState, string>> = {
   [GameState.MENU]: '/',
   [GameState.DASHBOARD]: '/stats',
   [GameState.PLAYING]: '/play',
@@ -63,8 +63,9 @@ const App: React.FC = () => {
   const [paywallReason, setPaywallReason] = useState<'game' | 'analysis'>('game');
 
   const isPremium = user?.isAdmin === true;
-  const showTrialBanner = !!user && !isPremium;
-  const showReferralBanner = !!user && isPremium;
+  const isPlayingOrDiagnostic = appState === GameState.PLAYING || appState === GameState.DIAGNOSTIC;
+  const showTrialBanner = !!user && !isPremium && !isPlayingOrDiagnostic;
+  const showReferralBanner = !!user && isPremium && !isPlayingOrDiagnostic;
 
   // ─── License Activation ──────────────────────────────────────────────────
   const [licenseKey, setLicenseKey] = useState('');
