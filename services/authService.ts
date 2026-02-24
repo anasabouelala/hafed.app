@@ -20,27 +20,33 @@ export const authService = {
                 .eq('auth_user_id', session.user.id)
                 .maybeSingle();
 
-            // Link shadow profile from Gumroad webhook if they bought before registering
+            // Link shadow profile from Gumroad webhook via secure Vercel API
             if (!profile && session.user.email) {
-                const { data: shadowProfile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('email', session.user.email.toLowerCase().trim())
-                    .maybeSingle();
+                try {
+                    const res = await fetch('/api/claim-profile', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                        }
+                    });
+                    const data = await res.json();
 
-                if (shadowProfile) {
-                    // Claim the shadow profile
-                    const { data: updatedProfile, error: linkError } = await supabase
-                        .from('profiles')
-                        .update({ auth_user_id: session.user.id })
-                        .eq('id', shadowProfile.id)
-                        .select()
-                        .single();
+                    if (data?.claimed) {
+                        // Shadow profile claimed! Fetch the fresh profile again safely
+                        const { data: refreshedProfile } = await supabase
+                            .from('profiles')
+                            .select('*')
+                            .eq('auth_user_id', session.user.id)
+                            .maybeSingle();
 
-                    if (!linkError && updatedProfile) {
-                        profile = updatedProfile;
-                        error = null;
+                        if (refreshedProfile) {
+                            profile = refreshedProfile;
+                            error = null;
+                        }
                     }
+                } catch (apiErr) {
+                    console.error('Failed to claim shadow profile API call', apiErr);
                 }
             }
 
@@ -139,36 +145,42 @@ export const authService = {
         // Setup initial profile
         if (data.user) {
             const userEmail = email.toLowerCase().trim();
-            const { data: shadowProfile } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('email', userEmail)
-                .maybeSingle();
+            try {
+                // The /api/claim-profile expects the token.
+                // We don't have the token reliably until user signs in.
+                // So we'll just insert a normal profile.
+                // If a shadow profile already exists, RLS will block inserting duplicate email unless handled.
+                // BUT it is better to rely on getCurrentUser linking it instead!
 
-            if (shadowProfile) {
-                // Link Google/Email account to existing paid shadow profile
-                await supabase
+                // First check if ANY profile exists for this email
+                const { data: existingProfile } = await supabase
                     .from('profiles')
-                    .update({
-                        auth_user_id: data.user.id,
-                        full_name: name
-                    })
-                    .eq('id', shadowProfile.id);
-            } else {
-                // Completely new user without previous purchase
-                const { error: profileError } = await supabase
-                    .from('profiles')
-                    .insert([
-                        {
-                            auth_user_id: data.user.id,
-                            email: userEmail,
-                            full_name: name,
-                            level: 1,
-                            xp: 0,
-                            streak: 0
-                        }
-                    ]);
-                if (profileError) console.error('Error creating profile:', profileError);
+                    .select('id, auth_user_id')
+                    .eq('email', userEmail)
+                    .maybeSingle();
+
+                if (existingProfile) {
+                    // Profile exists. If auth_user_id is null, it's a shadow profile.
+                    // We don't have the full session token yet, so `getCurrentUser` will trigger next and claim it securely.
+                    console.log('Existing profile found, deferring to getCurrentUser for claiming');
+                } else {
+                    // No profile exists, safe to insert!
+                    const { error: profileError } = await supabase
+                        .from('profiles')
+                        .insert([
+                            {
+                                auth_user_id: data.user.id,
+                                email: userEmail,
+                                full_name: name,
+                                level: 1,
+                                xp: 0,
+                                streak: 0
+                            }
+                        ]);
+                    if (profileError) console.error('Error creating profile:', profileError);
+                }
+            } catch (err) {
+                console.error("Setup initial profile issue:", err);
             }
         }
 
