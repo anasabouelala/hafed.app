@@ -6,7 +6,11 @@ import { Copy, CheckCheck, Gift, Users } from 'lucide-react';
 const DISCOUNT_CODE = '30HAFED30';
 const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl?wanted=true';
 
-export const ReferralBanner: React.FC = () => {
+interface ReferralBannerProps {
+    gumroadUrl?: string;
+}
+
+export const ReferralBanner: React.FC<ReferralBannerProps> = ({ gumroadUrl = GUMROAD_URL }) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = async () => {
@@ -77,9 +81,8 @@ export const ReferralBanner: React.FC = () => {
 
                     {/* Share link */}
                     <a
-                        href={`${GUMROAD_URL}&discount_code=${DISCOUNT_CODE}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href={`${gumroadUrl}&discount_code=${DISCOUNT_CODE}`}
+                        data-gumroad-overlay-checkout="true"
                         className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs
               min-h-[40px] bg-emerald-900/50 border border-white/20 text-white
               hover:bg-emerald-900/70 transition-all active:scale-95"

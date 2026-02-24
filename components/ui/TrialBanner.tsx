@@ -8,9 +8,10 @@ const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl?wanted=true';
 
 interface TrialBannerProps {
     onUpgrade: () => void;
+    gumroadUrl?: string;
 }
 
-export const TrialBanner: React.FC<TrialBannerProps> = ({ onUpgrade }) => {
+export const TrialBanner: React.FC<TrialBannerProps> = ({ onUpgrade, gumroadUrl = GUMROAD_URL }) => {
     const { games, analysis } = trialService.getRemaining();
     const exhausted = games === 0 && analysis === 0;
 
@@ -52,9 +53,8 @@ export const TrialBanner: React.FC<TrialBannerProps> = ({ onUpgrade }) => {
 
                     {/* CTA — direct link to Gumroad checkout */}
                     <a
-                        href={GUMROAD_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href={gumroadUrl}
+                        data-gumroad-overlay-checkout="true"
                         className="shrink-0 flex flex-col items-center justify-center
               px-4 py-2 rounded-2xl
               bg-white text-red-600 hover:bg-orange-50

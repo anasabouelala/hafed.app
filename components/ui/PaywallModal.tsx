@@ -80,8 +80,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({ open, onClose, reaso
                             {/* CTA */}
                             <a
                                 href={gumroadUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                data-gumroad-overlay-checkout="true"
                                 className="block w-full text-center bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-black text-lg py-4 px-8 rounded-2xl shadow-[0_10px_40px_rgba(79,70,229,0.4)] hover:scale-105 active:scale-95 transition-all"
                             >
                                 <Zap className="inline-block ml-2 w-5 h-5" />

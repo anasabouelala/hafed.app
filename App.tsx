@@ -216,6 +216,10 @@ const App: React.FC = () => {
     );
   }
 
+  const userGumroadUrl = user && user.email
+    ? `${GUMROAD_URL}&email=${encodeURIComponent(user.email)}`
+    : GUMROAD_URL;
+
   return (
     <div className={`antialiased font-sans text-white
       ${showTrialBanner ? 'pt-[112px] sm:pt-[74px]' : ''}
@@ -223,11 +227,11 @@ const App: React.FC = () => {
     `}>
 
       {/* ─── Referral Banner (premium users) ─── */}
-      {showReferralBanner && <ReferralBanner />}
+      {showReferralBanner && <ReferralBanner gumroadUrl={userGumroadUrl} />}
 
       {/* ─── Trial Banner (free users) ──────── */}
       {showTrialBanner && (
-        <TrialBanner onUpgrade={() => { setPaywallReason('game'); setShowPaywall(true); }} />
+        <TrialBanner onUpgrade={() => { setPaywallReason('game'); setShowPaywall(true); }} gumroadUrl={userGumroadUrl} />
       )}
 
       {/* ─── Paywall Modal ───────────────────── */}
@@ -235,7 +239,7 @@ const App: React.FC = () => {
         open={showPaywall}
         onClose={() => setShowPaywall(false)}
         reason={paywallReason}
-        gumroadUrl={GUMROAD_URL}
+        gumroadUrl={userGumroadUrl}
       />
 
       {/* ─── License Activation Modal ─────────── */}
