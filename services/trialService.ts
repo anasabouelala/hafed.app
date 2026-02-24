@@ -18,12 +18,7 @@ function load(): TrialData {
     try {
         const raw = localStorage.getItem(TRIAL_KEY);
         if (!raw) return { gamesPlayed: 0, analysisPlayed: 0, dateKey: todayKey() };
-        const data: TrialData = JSON.parse(raw);
-        // Reset daily
-        if (data.dateKey !== todayKey()) {
-            return { gamesPlayed: 0, analysisPlayed: 0, dateKey: todayKey() };
-        }
-        return data;
+        return JSON.parse(raw);
     } catch {
         return { gamesPlayed: 0, analysisPlayed: 0, dateKey: todayKey() };
     }
