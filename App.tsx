@@ -21,6 +21,7 @@ const STATE_TO_PATH: Partial<Record<GameState, string>> = {
   [GameState.DASHBOARD]: '/stats',
   [GameState.PLAYING]: '/play',
   [GameState.DIAGNOSTIC]: '/diagnostic',
+  [GameState.ACTIVATE]: '/activate',
 };
 const PATH_TO_STATE: Record<string, GameState> = {
   '/': GameState.MENU,
@@ -28,6 +29,7 @@ const PATH_TO_STATE: Record<string, GameState> = {
   '/stats': GameState.DASHBOARD,
   '/play': GameState.PLAYING,
   '/diagnostic': GameState.DIAGNOSTIC,
+  '/activate': GameState.ACTIVATE,
 };
 
 function navigate(path: string, replace = false) {
@@ -243,7 +245,7 @@ const App: React.FC = () => {
       />
 
       {/* ─── License Activation Modal ─────────── */}
-      {showLicenseModal && (
+      {(showLicenseModal || appState === GameState.ACTIVATE) && (
         <LicenseActivation
           initialKey={licenseKey}
           onSuccess={async () => {
@@ -254,7 +256,10 @@ const App: React.FC = () => {
             setAppState(GameState.DASHBOARD);
             setMenuInitialState(undefined);
           }}
-          onClose={() => setShowLicenseModal(false)}
+          onClose={() => {
+            setShowLicenseModal(false);
+            if (appState === GameState.ACTIVATE) setAppState(GameState.MENU);
+          }}
         />
       )}
 
