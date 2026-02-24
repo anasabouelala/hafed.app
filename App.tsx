@@ -77,6 +77,10 @@ const App: React.FC = () => {
 
   // ─── URL sync: update URL whenever appState changes ─────────────────────
   useEffect(() => {
+    // Preserve `/activate` in the url bar if that's where we landed
+    if (appState === GameState.MENU && window.location.pathname === '/activate') {
+      return;
+    }
     const path = STATE_TO_PATH[appState] ?? '/';
     navigate(path);
   }, [appState]);

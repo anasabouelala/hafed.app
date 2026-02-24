@@ -154,9 +154,9 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
             setUser(propUser);
             setStep(prev => (prev === 'HOME' || prev === 'AUTH') ? 'USER_HOME' : prev);
         } else if (propUser === null) {
-            // Explicit logout — go back to landing page
+            // Explicit logout — go back to landing page (but don't clobber 'AUTH' on first mount)
             setUser(null);
-            setStep('HOME');
+            setStep(prev => prev === 'USER_HOME' ? 'HOME' : prev);
         }
     }, [propUser]);
 
