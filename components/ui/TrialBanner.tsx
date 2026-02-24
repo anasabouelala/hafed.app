@@ -54,7 +54,8 @@ export const TrialBanner: React.FC<TrialBannerProps> = ({ onUpgrade, gumroadUrl 
                     {/* CTA — direct link to Gumroad checkout */}
                     <a
                         href={gumroadUrl}
-                        data-gumroad-overlay-checkout="true"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="shrink-0 flex flex-col items-center justify-center
               px-4 py-2 rounded-2xl
               bg-white text-red-600 hover:bg-orange-50

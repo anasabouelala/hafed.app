@@ -82,7 +82,8 @@ export const ReferralBanner: React.FC<ReferralBannerProps> = ({ gumroadUrl = GUM
                     {/* Share link */}
                     <a
                         href={`${gumroadUrl}&discount_code=${DISCOUNT_CODE}`}
-                        data-gumroad-overlay-checkout="true"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs
               min-h-[40px] bg-emerald-900/50 border border-white/20 text-white
               hover:bg-emerald-900/70 transition-all active:scale-95"
