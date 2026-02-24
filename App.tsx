@@ -106,6 +106,29 @@ const App: React.FC = () => {
     }
   }, [licenseKey, user]);
 
+  // ─── Listen for Gumroad Overlay Payment Success ──────────────────────────
+  useEffect(() => {
+    const handleGumroadSuccess = async () => {
+      // Wait a moment for our backend 'ping' webhook to process the sale
+      await new Promise((r) => setTimeout(r, 2000));
+
+      // Reload the user data from Supabase
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+
+      // If upgraded, automatically close everything and jump to dashboard!
+      if (currentUser?.isAdmin) {
+        setShowPaywall(false);
+        setAppState(GameState.DASHBOARD);
+      } else {
+        // If the ping hasn't arrived yet, optionally reload or keep waiting
+        window.location.reload();
+      }
+    };
+    window.addEventListener('gumroad-page-sale-successful', handleGumroadSuccess);
+    return () => window.removeEventListener('gumroad-page-sale-successful', handleGumroadSuccess);
+  }, []);
+
   // ─── Auth Initialisation ─────────────────────────────────────────────────
   useEffect(() => {
     const initAuth = async () => {
