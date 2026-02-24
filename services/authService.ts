@@ -14,11 +14,35 @@ export const authService = {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             if (sessionError || !session?.user) return null;
 
-            const { data: profile, error } = await supabase
+            let { data: profile, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('auth_user_id', session.user.id)
-                .single();
+                .maybeSingle();
+
+            // Link shadow profile from Gumroad webhook if they bought before registering
+            if (!profile && session.user.email) {
+                const { data: shadowProfile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('email', session.user.email.toLowerCase().trim())
+                    .maybeSingle();
+
+                if (shadowProfile) {
+                    // Claim the shadow profile
+                    const { data: updatedProfile, error: linkError } = await supabase
+                        .from('profiles')
+                        .update({ auth_user_id: session.user.id })
+                        .eq('id', shadowProfile.id)
+                        .select()
+                        .single();
+
+                    if (!linkError && updatedProfile) {
+                        profile = updatedProfile;
+                        error = null;
+                    }
+                }
+            }
 
             if (error || !profile) {
                 const email = session.user.email || '';
@@ -114,19 +138,38 @@ export const authService = {
 
         // Setup initial profile
         if (data.user) {
-            const { error: profileError } = await supabase
+            const userEmail = email.toLowerCase().trim();
+            const { data: shadowProfile } = await supabase
                 .from('profiles')
-                .insert([
-                    {
+                .select('id')
+                .eq('email', userEmail)
+                .maybeSingle();
+
+            if (shadowProfile) {
+                // Link Google/Email account to existing paid shadow profile
+                await supabase
+                    .from('profiles')
+                    .update({
                         auth_user_id: data.user.id,
-                        email: email,
-                        full_name: name,
-                        level: 1,
-                        xp: 0,
-                        streak: 0
-                    }
-                ]);
-            if (profileError) console.error('Error creating profile:', profileError);
+                        full_name: name
+                    })
+                    .eq('id', shadowProfile.id);
+            } else {
+                // Completely new user without previous purchase
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .insert([
+                        {
+                            auth_user_id: data.user.id,
+                            email: userEmail,
+                            full_name: name,
+                            level: 1,
+                            xp: 0,
+                            streak: 0
+                        }
+                    ]);
+                if (profileError) console.error('Error creating profile:', profileError);
+            }
         }
 
         return data.user;

@@ -45,29 +45,56 @@ export default async function handler(req: Request) {
         const premiumExpiresAt = new Date();
         premiumExpiresAt.setDate(premiumExpiresAt.getDate() + 30);
 
-        // Update the user's profile based strictly on the EMAIL sent by Gumroad
-        const { data: updatedUsers, error: updateError } = await supabaseAdmin
+        const userEmail = email.toLowerCase().trim();
+
+        // 1. Check if profile already exists
+        const { data: existingProfiles } = await supabaseAdmin
             .from('profiles')
-            .update({
-                is_premium: true,
-                license_key: license_key ? license_key.trim() : null,
-                premium_expires_at: premiumExpiresAt.toISOString(),
-            })
-            .eq('email', email.toLowerCase().trim())
-            .select();
+            .select('id')
+            .eq('email', userEmail);
 
-        if (updateError) {
-            console.error('Error updating profile in Supabase:', updateError);
-            return new Response('Internal error updating database', { status: 500 });
-        }
+        if (existingProfiles && existingProfiles.length > 0) {
+            // 2. User exists, update them
+            const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({
+                    is_premium: true,
+                    license_key: license_key ? license_key.trim() : null,
+                    premium_expires_at: premiumExpiresAt.toISOString(),
+                })
+                .eq('email', userEmail);
 
-        if (updatedUsers && updatedUsers.length > 0) {
-            console.log(`Successfully upgraded user: ${email} to Premium via Gumroad Ping API`);
-            return new Response('Success - User upgraded to Premium', { status: 200 });
+            if (updateError) {
+                console.error('Error updating profile in Supabase:', updateError);
+                return new Response('Internal error updating database', { status: 500 });
+            }
+
+            console.log(`Successfully upgraded existing user: ${userEmail} via Gumroad Ping`);
+            return new Response('Success - Existing User upgraded to Premium', { status: 200 });
+
         } else {
-            console.log(`Ping received for ${email}, but no account with that email exists yet in Supabase.`);
-            // Optional: You could create a shadow account for them here if desired.
-            return new Response('OK, but user email not found in DB', { status: 200 });
+            // 3. User does NOT exist yet (bought before registering). Create a shadow profile!
+            // This row has NO auth_user_id yet. The frontend will link it up when they register or login.
+            const { error: insertError } = await supabaseAdmin
+                .from('profiles')
+                .insert({
+                    email: userEmail,
+                    is_premium: true,
+                    license_key: license_key ? license_key.trim() : null,
+                    premium_expires_at: premiumExpiresAt.toISOString(),
+                    full_name: 'Premium User',
+                    level: 1,
+                    xp: 0,
+                    streak: 0
+                });
+
+            if (insertError) {
+                console.error('Error creating shadow profile:', insertError);
+                return new Response('Internal error creating database row', { status: 500 });
+            }
+
+            console.log(`Created new SHADOW premium profile for: ${userEmail}`);
+            return new Response('Success - Shadow Profile Created', { status: 200 });
         }
 
     } catch (err: any) {
