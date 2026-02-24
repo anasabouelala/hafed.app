@@ -71,6 +71,9 @@ const App: React.FC = () => {
   // ─── License Activation ──────────────────────────────────────────────────
   const [licenseKey, setLicenseKey] = useState('');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [activationIntent, setActivationIntent] = useState(() => {
+    return window.location.pathname === '/activate' || new URLSearchParams(window.location.search).has('license_key');
+  });
 
   // ─── URL sync: update URL whenever appState changes ─────────────────────
   useEffect(() => {
@@ -96,16 +99,21 @@ const App: React.FC = () => {
     if (key) {
       setLicenseKey(key);
       // Clean query string but keep the pathname
-      window.history.replaceState({}, '', window.location.pathname);
+      params.delete('license_key');
+      const newSearch = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : ''));
     }
   }, []);
 
-  // Show activation modal once user is loaded and key is present
+  // Show activation modal once user is loaded
   useEffect(() => {
-    if (licenseKey && user && !isPremium) {
-      setShowLicenseModal(true);
+    if (activationIntent && user) {
+      if (!isPremium) {
+        setShowLicenseModal(true);
+      }
+      setActivationIntent(false);
     }
-  }, [licenseKey, user]);
+  }, [activationIntent, user, isPremium]);
 
 
 
@@ -265,6 +273,7 @@ const App: React.FC = () => {
       {appState === GameState.MENU && (
         <MainMenu
           user={user}
+          startInAuth={activationIntent}
           onStartGame={handleStartGame}
           onStartDiagnostic={handleStartDiagnostic}
           onOpenDashboard={handleOpenDashboard}

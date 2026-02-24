@@ -18,6 +18,7 @@ interface Props {
     onOpenDashboard: () => void;
     initialState?: MenuState;
     user?: UserProfile | null;
+    startInAuth?: boolean;
 }
 
 
@@ -132,9 +133,13 @@ const LiveActivityFeed: React.FC = () => {
     );
 };
 
-export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOpenDashboard, initialState, user: propUser }) => {
+export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOpenDashboard, initialState, user: propUser, startInAuth }) => {
     // If we already know the user at mount time (from App.tsx auth), skip the landing page immediately
-    const [step, setStep] = useState<MenuStep>(propUser ? 'USER_HOME' : 'HOME');
+    const [step, setStep] = useState<MenuStep>(() => {
+        if (propUser) return 'USER_HOME';
+        if (startInAuth) return 'AUTH';
+        return 'HOME';
+    });
     const [user, setUser] = useState<UserProfile | null>(null);
     const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
     const [intent, setIntent] = useState<Intent>(null);
