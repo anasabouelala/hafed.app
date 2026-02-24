@@ -224,7 +224,7 @@ const App: React.FC = () => {
             setUser(updated);
             setShowLicenseModal(false);
             setLicenseKey('');
-            setAppState(GameState.MENU);
+            setAppState(GameState.DASHBOARD);
             setMenuInitialState(undefined);
           }}
           onClose={() => setShowLicenseModal(false)}
