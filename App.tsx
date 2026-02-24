@@ -21,7 +21,6 @@ const STATE_TO_PATH: Partial<Record<GameState, string>> = {
   [GameState.DASHBOARD]: '/stats',
   [GameState.PLAYING]: '/play',
   [GameState.DIAGNOSTIC]: '/diagnostic',
-  [GameState.ACTIVATE]: '/activate',
 };
 const PATH_TO_STATE: Record<string, GameState> = {
   '/': GameState.MENU,
@@ -29,7 +28,7 @@ const PATH_TO_STATE: Record<string, GameState> = {
   '/stats': GameState.DASHBOARD,
   '/play': GameState.PLAYING,
   '/diagnostic': GameState.DIAGNOSTIC,
-  '/activate': GameState.ACTIVATE,
+  '/activate': GameState.MENU,
 };
 
 function navigate(path: string, replace = false) {
@@ -112,6 +111,7 @@ const App: React.FC = () => {
 
   // ─── Auth Initialisation ─────────────────────────────────────────────────
   useEffect(() => {
+    let unmounted = false;
     const initAuth = async () => {
       try {
         setLoadingStatus('Checking Supabase connection...');
@@ -124,19 +124,42 @@ const App: React.FC = () => {
           timeoutPromise,
         ]) as UserProfile | null;
 
-        setLoadingStatus('User found, setting state...');
-        setUser(currentUser);
+        if (!unmounted) {
+          setLoadingStatus('User found, setting state...');
+          setUser(currentUser);
+
+          // Auto-direct to dashboard if logged in and on the main / or /activate route
+          const currentPath = window.location.pathname;
+          if (currentUser && (currentPath === '/' || currentPath === '/app' || currentPath === '/activate')) {
+            setAppState(GameState.DASHBOARD);
+          }
+        }
       } catch (error) {
         console.error('Auth check failed or timed out', error);
       } finally {
-        setLoadingStatus('Finalizing...');
-        setAuthLoading(false);
+        if (!unmounted) {
+          setLoadingStatus('Finalizing...');
+          setAuthLoading(false);
+        }
       }
     };
     initAuth();
 
-    const { data } = authService.onAuthStateChange((u) => { setUser(u); });
-    return () => { data?.subscription.unsubscribe(); };
+    const { data } = authService.onAuthStateChange((u) => {
+      if (!unmounted) {
+        setUser(u);
+        // Also auto-direct to dashboard upon login
+        const currentPath = window.location.pathname;
+        if (u && (currentPath === '/' || currentPath === '/app' || currentPath === '/activate')) {
+          setAppState(GameState.DASHBOARD);
+        }
+      }
+    });
+
+    return () => {
+      unmounted = true;
+      data?.subscription.unsubscribe();
+    };
   }, []);
 
   // ─── Gated Handlers ──────────────────────────────────────────────────────
@@ -224,7 +247,7 @@ const App: React.FC = () => {
       />
 
       {/* ─── License Activation Modal ─────────── */}
-      {(showLicenseModal || appState === GameState.ACTIVATE) && (
+      {showLicenseModal && (
         <LicenseActivation
           initialKey={licenseKey}
           onSuccess={async () => {
@@ -235,10 +258,7 @@ const App: React.FC = () => {
             setAppState(GameState.DASHBOARD);
             setMenuInitialState(undefined);
           }}
-          onClose={() => {
-            setShowLicenseModal(false);
-            if (appState === GameState.ACTIVATE) setAppState(GameState.MENU);
-          }}
+          onClose={() => setShowLicenseModal(false)}
         />
       )}
 

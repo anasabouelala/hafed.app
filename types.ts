@@ -8,8 +8,7 @@ export enum GameState {
   LOADING = 'LOADING',
   PLAYING = 'PLAYING',
   GAME_OVER = 'GAME_OVER',
-  VICTORY = 'VICTORY',
-  ACTIVATE = 'ACTIVATE'
+  VICTORY = 'VICTORY'
 }
 
 export type GameMode = 'CLASSIC' | 'ASSEMBLY' | 'SURF' | 'STACK' | 'SURVIVOR' | 'LEARN' | 'QUIZ';
