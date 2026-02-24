@@ -11,6 +11,7 @@ import { LicenseActivation } from './components/ui/LicenseActivation';
 import { GameState, GameMode, UserProfile } from './types';
 import { authService } from './services/authService';
 import { trialService } from './services/trialService';
+import { PremiumWelcomeModal } from './components/ui/PremiumWelcomeModal';
 
 // ─── Gumroad product checkout ─────────────────────────────────────────────────
 const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl?wanted=true';
@@ -62,6 +63,7 @@ const App: React.FC = () => {
   // ─── Trial / Paywall State ────────────────────────────────────────────────
   const [showPaywall, setShowPaywall] = useState(false);
   const [paywallReason, setPaywallReason] = useState<'game' | 'analysis'>('game');
+  const [showPremiumWelcome, setShowPremiumWelcome] = useState(false);
 
   const isPremium = user?.isAdmin === true;
   const isPlayingOrDiagnostic = appState === GameState.PLAYING || appState === GameState.DIAGNOSTIC;
@@ -119,7 +121,20 @@ const App: React.FC = () => {
     }
   }, [activationIntent, user, isPremium]);
 
+  // Show premium welcome modal once 
+  useEffect(() => {
+    if (user && isPremium) {
+      const hasSeenWelcome = localStorage.getItem('hafed_premium_welcomed');
+      if (!hasSeenWelcome) {
+        setShowPremiumWelcome(true);
+      }
+    }
+  }, [user, isPremium]);
 
+  const handleCloseWelcome = () => {
+    localStorage.setItem('hafed_premium_welcomed', 'true');
+    setShowPremiumWelcome(false);
+  };
 
   // ─── Auth Initialisation ─────────────────────────────────────────────────
   useEffect(() => {
@@ -319,7 +334,7 @@ const App: React.FC = () => {
       )}
 
       {appState === GameState.DASHBOARD && (
-        <DashboardScreen onBack={() => setAppState(GameState.MENU)} />
+        <DashboardScreen onBack={() => setAppState(GameState.MENU)} isPremium={isPremium} />
       )}
 
       {appState === GameState.DIAGNOSTIC && (
@@ -342,6 +357,12 @@ const App: React.FC = () => {
           onExit={handleExit}
         />
       )}
+
+      {/* Premium Welcome Popup */}
+      <PremiumWelcomeModal
+        isOpen={showPremiumWelcome}
+        onClose={handleCloseWelcome}
+      />
     </div>
   );
 };

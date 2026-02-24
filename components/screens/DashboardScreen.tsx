@@ -8,6 +8,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface Props {
     onBack: () => void;
+    isPremium: boolean;
 }
 
 const QURAN_SURAHS = [
@@ -25,7 +26,7 @@ const QURAN_SURAHS = [
     "المسد", "الإخلاص", "الفلق", "الناس"
 ];
 
-export const DashboardScreen: React.FC<Props> = ({ onBack }) => {
+export const DashboardScreen: React.FC<Props> = ({ onBack, isPremium }) => {
     const [global, setGlobal] = useState<GlobalStats | null>(null);
     const [surahs, setSurahs] = useState<SurahStats[]>([]);
     const [showGoalModal, setShowGoalModal] = useState(false);
@@ -152,6 +153,13 @@ export const DashboardScreen: React.FC<Props> = ({ onBack }) => {
                             </div>
 
                             <h2 className="text-2xl font-bold text-white mb-1 font-arabic">{getRankTitle(global.level)}</h2>
+
+                            {isPremium && (
+                                <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-black px-3 py-1 rounded-full font-bold text-xs mb-3 shadow-[0_0_15px_rgba(251,191,36,0.3)] border border-yellow-200" title="Premium Access">
+                                    <Crown size={14} className="fill-black/30 text-black" /> حساب متميز
+                                </div>
+                            )}
+
                             <div className="flex items-center gap-2 text-slate-400 text-sm mb-6">
                                 <Sparkles size={14} className="text-yellow-400" />
                                 <span>{Math.floor(global.totalXp || 0)} نقطة خبرة</span>
