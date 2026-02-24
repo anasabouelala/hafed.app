@@ -154,14 +154,25 @@ export const authService = {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return { success: false, error: 'Not authenticated' };
 
-            const res = await supabase.functions.invoke('verify-license', {
-                body: { license_key: licenseKey },
+            // Call Vercel API Route instead of Supabase Edge Function to avoid deployment/CORS issues
+            const res = await fetch('/api/verify-license', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ license_key: licenseKey })
             });
 
-            if (res.error) return { success: false, error: res.error.message };
-            return res.data as { success: boolean; premium_expires_at: string };
+            const data = await res.json();
+
+            if (!res.ok) {
+                return { success: false, error: data.error || 'Activation failed' };
+            }
+
+            return data as { success: boolean; premium_expires_at: string };
         } catch (err: any) {
-            return { success: false, error: err.message };
+            return { success: false, error: err.message || 'Network error' };
         }
     },
 
