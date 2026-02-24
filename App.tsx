@@ -174,6 +174,39 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // ─── Auto-Refresh on Window Focus ──────────────────────────────────────────
+  useEffect(() => {
+    const onFocus = async () => {
+      // Re-fetch user on window focus to catch seamless Gumroad upgrades instantly
+      if (document.visibilityState === 'visible' && user && !isPremium) {
+        try {
+          const freshUser = await authService.getCurrentUser();
+          if (freshUser && freshUser.isAdmin) {
+            // Upgraded!
+            setUser(freshUser);
+          }
+        } catch (e) {
+          console.error("Failed to refresh user on focus:", e);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
+
+    // Also poll every 10 seconds just in case they don't switch tabs (e.g. split screen)
+    let pollInterval: any;
+    if (user && !isPremium) {
+      pollInterval = setInterval(onFocus, 10000);
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [user, isPremium]);
+
   // ─── Gated Handlers ──────────────────────────────────────────────────────
   const handleStartGame = useCallback((
     surah: string,
