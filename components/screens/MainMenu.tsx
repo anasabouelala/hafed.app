@@ -159,17 +159,9 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
         }
     }, [propUser]);
 
-    // Fallback: listen for auth changes
-    useEffect(() => {
-        const { data } = authService.onAuthStateChange(async (u) => {
-            if (u) {
-                setUser(u);
-                await syncFromCloud();
-                setStep('USER_HOME');
-            }
-        });
-        return () => { data?.subscription.unsubscribe(); };
-    }, []);
+    // NOTE: Auth state is managed by App.tsx via the propUser prop.
+    // Do NOT add a second onAuthStateChange subscriber here — it causes
+    // duplicate concurrent getCurrentUser() calls that freeze the loading state.
 
 
     // Selection State
@@ -307,8 +299,7 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
         try {
             if (authMode === 'LOGIN') {
                 await authService.signIn(email, password);
-                // Authentication state change will trigger the listener
-                await syncFromCloud();
+                // App.tsx onAuthStateChange will update propUser → triggers auto-forward to Dashboard
                 setStep('USER_HOME');
             } else {
                 await authService.signUp(email, password, name);
