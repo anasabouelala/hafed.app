@@ -1562,12 +1562,13 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
                                 </div>
                                 <button
                                     onClick={async () => {
-                                        await authService.signOut();
-                                        window.location.reload();
+                                        try { await authService.signOut(); } catch (e) { }
+                                        window.location.href = '/';
                                     }}
-                                    className="text-slate-500 hover:text-red-400 text-sm font-bold transition-colors"
+                                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-xl border border-red-500/20 hover:border-red-500/50 transition-all text-sm font-bold flex items-center gap-2"
                                 >
-                                    تسجيل خروج
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                                    خروج
                                 </button>
                             </div>
 

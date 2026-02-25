@@ -199,8 +199,13 @@ export const authService = {
     },
 
     async signOut() {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
+        try {
+            await supabase.auth.signOut();
+        } catch (error) {
+            console.error('Sign out error:', error);
+        }
+        // Force clear any auth tokens that might be stuck
+        localStorage.removeItem('supabase.auth.token');
     },
 
     /** Verify a Gumroad license key and activate premium on the logged-in user */
