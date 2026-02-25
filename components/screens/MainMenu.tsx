@@ -134,9 +134,8 @@ const LiveActivityFeed: React.FC = () => {
 };
 
 export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOpenDashboard, initialState, user: propUser, startInAuth }) => {
-    // If we already know the user at mount time (from App.tsx auth), skip the landing page immediately
+    // Initialize explicitly on HOME or AUTH. Do not auto-skip the landing page!
     const [step, setStep] = useState<MenuStep>(() => {
-        if (propUser) return 'USER_HOME';
         if (startInAuth) return 'AUTH';
         return 'HOME';
     });
@@ -152,25 +151,29 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
     useEffect(() => {
         if (propUser) {
             setUser(propUser);
-            setStep(prev => (prev === 'HOME' || prev === 'AUTH') ? 'USER_HOME' : prev);
+            if (step === 'AUTH') {
+                // Return to landing page once authenticated!
+                setStep('HOME');
+            }
         } else if (propUser === null) {
-            // Explicit logout — go back to landing page (but don't clobber 'AUTH' on first mount)
             setUser(null);
-            setStep(prev => prev === 'USER_HOME' ? 'HOME' : prev);
+            setStep('HOME');
         }
-    }, [propUser]);
+    }, [propUser, step]);
 
-    // Fallback: listen for auth changes in case propUser is not passed
+    // Fallback: listen for auth changes
     useEffect(() => {
         const { data } = authService.onAuthStateChange(async (u) => {
             if (u) {
                 setUser(u);
                 await syncFromCloud();
-                setStep(prev => (prev === 'HOME' || prev === 'AUTH') ? 'USER_HOME' : prev);
+                if (step === 'AUTH') {
+                    setStep('HOME');
+                }
             }
         });
         return () => { data?.subscription.unsubscribe(); };
-    }, []);
+    }, [step]);
 
 
     // Selection State
@@ -381,25 +384,47 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
                                     <span className="font-extrabold text-xl tracking-tight text-white font-cairo">hafed.app</span>
                                 </div>
 
-                                <div className="flex items-center gap-4">
-                                    <button
-                                        className="hidden md:block text-slate-300 font-bold hover:text-white transition-colors text-sm"
-                                        onClick={() => { }}
-                                    >
-                                        تواصل معنا
-                                    </button>
-                                    <button
-                                        className="text-white font-bold hover:text-cyan-300 transition-colors px-4 py-2"
-                                        onClick={() => { setStep('AUTH'); setAuthMode('LOGIN'); }}
-                                    >
-                                        دخول
-                                    </button>
-                                    <button
-                                        onClick={() => { setStep('AUTH'); setAuthMode('REGISTER'); }}
-                                        className="bg-white text-slate-900 px-6 py-3 rounded-full font-black text-sm shadow-[0_4px_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_8px_0_#cbd5e1] active:translate-y-0 active:shadow-none transition-all flex items-center gap-2"
-                                    >
-                                        جرب التطبيق ⚡
-                                    </button>
+                                <div className="flex flex-col sm:flex-row items-center gap-4">
+                                    {user ? (
+                                        <>
+                                            <button
+                                                className="text-slate-300 font-bold hover:text-red-400 transition-colors px-4 py-2 text-sm order-2 sm:order-1"
+                                                onClick={async () => {
+                                                    await authService.signOut();
+                                                    window.location.reload();
+                                                }}
+                                            >
+                                                تسجيل خروج
+                                            </button>
+                                            <button
+                                                onClick={() => { onOpenDashboard(); }}
+                                                className="bg-white text-slate-900 px-6 py-3 rounded-full font-black text-sm shadow-[0_4px_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_8px_0_#cbd5e1] active:translate-y-0 active:shadow-none transition-all flex items-center gap-2 order-1 sm:order-2"
+                                            >
+                                                لوحة التحكم المتميزة 🚀
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                className="hidden md:block text-slate-300 font-bold hover:text-white transition-colors text-sm"
+                                                onClick={() => { }}
+                                            >
+                                                تواصل معنا
+                                            </button>
+                                            <button
+                                                className="text-white font-bold hover:text-cyan-300 transition-colors px-4 py-2"
+                                                onClick={() => { setStep('AUTH'); setAuthMode('LOGIN'); }}
+                                            >
+                                                دخول
+                                            </button>
+                                            <button
+                                                onClick={() => { setStep('AUTH'); setAuthMode('REGISTER'); }}
+                                                className="bg-white text-slate-900 px-6 py-3 rounded-full font-black text-sm shadow-[0_4px_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_8px_0_#cbd5e1] active:translate-y-0 active:shadow-none transition-all flex items-center gap-2"
+                                            >
+                                                جرب التطبيق ⚡
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -456,13 +481,23 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
                                 </p>
 
                                 <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-8">
-                                    <button
-                                        onClick={() => { setStep('AUTH'); setAuthMode('REGISTER'); }}
-                                        className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-[0_10px_40px_rgba(79,70,229,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-                                    >
-                                        ابدأ رحلتك
-                                        <ChevronRight className="rtl:rotate-180" />
-                                    </button>
+                                    {user ? (
+                                        <button
+                                            onClick={() => setStep('USER_HOME')}
+                                            className="w-full md:w-auto bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-[0_10px_40px_rgba(16,185,129,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                                        >
+                                            متابعة التعلم والحفظ
+                                            <ChevronRight className="rtl:rotate-180" />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => { setStep('AUTH'); setAuthMode('REGISTER'); }}
+                                            className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-[0_10px_40px_rgba(79,70,229,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                                        >
+                                            ابدأ رحلتك
+                                            <ChevronRight className="rtl:rotate-180" />
+                                        </button>
+                                    )}
 
                                     <ActiveLearnersCounter />
                                 </div>

@@ -83,8 +83,13 @@ export default async function handler(req: Request) {
             });
         }
 
+        const supabaseAdmin = createClient(
+            process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '',
+            process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+        );
+
         // 3. Update the user's profile
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
             .from('profiles')
             .update({
                 license_key: license_key.trim(),

@@ -154,12 +154,6 @@ const App: React.FC = () => {
         if (!unmounted) {
           setLoadingStatus('User found, setting state...');
           setUser(currentUser);
-
-          // Auto-direct to dashboard if logged in and on the main / or /activate route
-          const currentPath = window.location.pathname;
-          if (currentUser && (currentPath === '/' || currentPath === '/app' || currentPath === '/activate')) {
-            setAppState(GameState.DASHBOARD);
-          }
         }
       } catch (error) {
         console.error('Auth check failed or timed out', error);
@@ -175,11 +169,6 @@ const App: React.FC = () => {
     const { data } = authService.onAuthStateChange((u) => {
       if (!unmounted) {
         setUser(u);
-        // Also auto-direct to dashboard upon login
-        const currentPath = window.location.pathname;
-        if (u && (currentPath === '/' || currentPath === '/app' || currentPath === '/activate')) {
-          setAppState(GameState.DASHBOARD);
-        }
       }
     });
 
@@ -199,6 +188,8 @@ const App: React.FC = () => {
           if (freshUser && freshUser.isAdmin) {
             // Upgraded!
             setUser(freshUser);
+            setShowPaywall(false);
+            setShowLicenseModal(false);
           }
         } catch (e) {
           console.error("Failed to refresh user on focus:", e);
