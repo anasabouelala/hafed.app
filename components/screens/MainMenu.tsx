@@ -294,10 +294,8 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
             setSelectedSurah("");
             setSearchTerm("");
         } else if (step === 'USER_HOME') {
-            // Logout or go back to landing?
-            // Let's say back to Landing for now to allow "Logout" feel
+            // Just go back to the shiny landing page but stay logged in!
             setStep('HOME');
-            setUser(null);
         } else if (step === 'AUTH') {
             setStep('HOME');
         }
