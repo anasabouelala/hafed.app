@@ -19,6 +19,7 @@ interface Props {
     initialState?: MenuState;
     user?: UserProfile | null;
     startInAuth?: boolean;
+    onLogout?: () => void;
 }
 
 
@@ -133,7 +134,7 @@ const LiveActivityFeed: React.FC = () => {
     );
 };
 
-export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOpenDashboard, initialState, user: propUser, startInAuth }) => {
+export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOpenDashboard, initialState, user: propUser, startInAuth, onLogout }) => {
     // Initialize explicitly on HOME or AUTH. Do not auto-skip the landing page!
     const [step, setStep] = useState<MenuStep>(() => {
         if (startInAuth) return 'AUTH';
@@ -1562,8 +1563,11 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
                                 </div>
                                 <button
                                     onClick={() => {
-                                        authService.signOut();
-                                        window.location.href = '/';
+                                        if (onLogout) onLogout();
+                                        else {
+                                            authService.signOut();
+                                            window.location.href = '/';
+                                        }
                                     }}
                                     className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-xl border border-red-500/20 hover:border-red-500/50 transition-all text-sm font-bold flex items-center gap-2"
                                 >

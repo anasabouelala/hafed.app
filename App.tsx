@@ -262,6 +262,20 @@ const App: React.FC = () => {
 
   const handleOpenDashboard = useCallback(() => { setAppState(GameState.DASHBOARD); }, []);
 
+  const handleLogout = () => {
+    // 1. Instantly unmount the dashboard to give user feedback
+    setUser(null);
+    setAppState(GameState.MENU);
+
+    // 2. Clear credentials safely from local storage manually & call server signout
+    authService.signOut();
+
+    // 3. Optional: Clear the URL if it has ?license_key=xxx
+    if (window.location.search.includes('license_key')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
+
   const handleExit = useCallback(() => {
     setAppState(GameState.MENU);
     setMenuInitialState(undefined);
@@ -321,7 +335,6 @@ const App: React.FC = () => {
           onClose={() => setShowLicenseModal(false)}
         />
       )}
-
       {appState === GameState.MENU && (
         <MainMenu
           user={user}
@@ -330,11 +343,11 @@ const App: React.FC = () => {
           onStartDiagnostic={handleStartDiagnostic}
           onOpenDashboard={handleOpenDashboard}
           initialState={menuInitialState}
+          onLogout={handleLogout}
         />
       )}
-
       {appState === GameState.DASHBOARD && (
-        <DashboardScreen onBack={() => setAppState(GameState.MENU)} isPremium={isPremium} />
+        <DashboardScreen onBack={() => setAppState(GameState.MENU)} isPremium={isPremium} onLogout={handleLogout} />
       )}
 
       {appState === GameState.DIAGNOSTIC && (
