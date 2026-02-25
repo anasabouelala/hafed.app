@@ -128,8 +128,8 @@ export const DashboardScreen: React.FC<Props> = ({ onBack, isPremium }) => {
                     <span className="text-xs text-arcade-cyan font-arabic tracking-wide">تابع تقدمك يا بطل القرآن</span>
                 </div>
                 <button
-                    onClick={async () => {
-                        try { await authService.signOut(); } catch (e) { }
+                    onClick={() => {
+                        authService.signOut();
                         window.location.href = '/';
                     }}
                     className="relative z-50 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2.5 rounded-xl border border-red-500/20 hover:border-red-500/50 transition-all font-bold flex items-center gap-2 shadow-lg active:scale-95"
