@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { GlobalStats, SurahStats } from '../../types';
 import { getGlobalStats, getSurahStats, addGoal, removeGoal } from '../../services/storageService';
 import { ArcadeButton } from '../ui/ArcadeButton';
+import { authService } from '../../services/authService';
 import { ArrowLeft, Activity, Flame, Medal, Scroll, Crown, Sparkles, Quote, Target, Plus, Calendar, Trash2, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -126,7 +127,16 @@ export const DashboardScreen: React.FC<Props> = ({ onBack, isPremium }) => {
                     </h1>
                     <span className="text-xs text-arcade-cyan font-arabic tracking-wide">تابع تقدمك يا بطل القرآن</span>
                 </div>
-                <div className="w-12"></div>
+                <button
+                    onClick={async () => {
+                        await authService.signOut();
+                        window.location.reload();
+                    }}
+                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 p-2.5 rounded-2xl border-2 border-red-500/20 hover:border-red-500/50 transition-all shadow-lg active:scale-95"
+                    title="تسجيل خروج"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
             </div>
 
             <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto w-full pb-20">

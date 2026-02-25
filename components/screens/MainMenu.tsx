@@ -1560,7 +1560,15 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
                                     </div>
                                     <ChevronRight className="text-slate-600 rtl:rotate-180 group-hover:text-white transition-colors mr-2" />
                                 </div>
-                                <button onClick={() => setStep('HOME')} className="text-slate-500 hover:text-white text-sm font-bold">تسجيل خروج</button>
+                                <button
+                                    onClick={async () => {
+                                        await authService.signOut();
+                                        window.location.reload();
+                                    }}
+                                    className="text-slate-500 hover:text-red-400 text-sm font-bold transition-colors"
+                                >
+                                    تسجيل خروج
+                                </button>
                             </div>
 
                             {/* Main Actions Grid (12-Column Layout) */}
