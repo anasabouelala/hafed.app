@@ -151,15 +151,13 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
     useEffect(() => {
         if (propUser) {
             setUser(propUser);
-            if (step === 'AUTH') {
-                // Return to landing page once authenticated!
-                setStep('HOME');
-            }
+            // Return to landing page once authenticated!
+            setStep(prev => prev === 'AUTH' ? 'HOME' : prev);
         } else if (propUser === null) {
             setUser(null);
-            setStep('HOME');
+            setStep(prev => prev === 'USER_HOME' ? 'HOME' : prev);
         }
-    }, [propUser, step]);
+    }, [propUser]);
 
     // Fallback: listen for auth changes
     useEffect(() => {
@@ -167,13 +165,11 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
             if (u) {
                 setUser(u);
                 await syncFromCloud();
-                if (step === 'AUTH') {
-                    setStep('HOME');
-                }
+                setStep(prev => prev === 'AUTH' ? 'HOME' : prev);
             }
         });
         return () => { data?.subscription.unsubscribe(); };
-    }, [step]);
+    }, []);
 
 
     // Selection State
