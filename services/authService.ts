@@ -200,11 +200,20 @@ export const authService = {
 
     async signOut() {
         try {
+            // 1. Aggressively clear local storage BEFORE the network call
+            // Supabase stores tokens in keys like "sb-xxxxxx-auth-token"
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                    localStorage.removeItem(key);
+                }
+            });
+
+            // 2. Perform the server-side logout safely
             await supabase.auth.signOut();
         } catch (error) {
-            console.error('Sign out error:', error);
+            console.error('Sign out network error:', error);
         }
-        // Force clear any auth tokens that might be stuck
+        // Force clear the old auth token key just in case
         localStorage.removeItem('supabase.auth.token');
     },
 
