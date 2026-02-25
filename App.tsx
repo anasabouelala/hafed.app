@@ -67,7 +67,7 @@ const App: React.FC = () => {
 
   const isPremium = user?.isAdmin === true;
   const isPlayingOrDiagnostic = appState === GameState.PLAYING || appState === GameState.DIAGNOSTIC;
-  const showTrialBanner = !!user && !isPremium && !isPlayingOrDiagnostic;
+  const showTrialBanner = !!user && !isPremium && !isPlayingOrDiagnostic && appState !== GameState.MENU;
   const showReferralBanner = !!user && isPremium && !isPlayingOrDiagnostic;
 
   // ─── License Activation ──────────────────────────────────────────────────
@@ -155,9 +155,8 @@ const App: React.FC = () => {
           setLoadingStatus('User found, setting state...');
           setUser(currentUser);
 
-          // Auto-direct to dashboard if logged in and on the main / or /activate route
-          const currentPath = window.location.pathname;
-          if (currentUser && (currentPath === '/' || currentPath === '/app' || currentPath === '/activate')) {
+          // Auto-direct to dashboard if logged in and currently on the landing/menu state
+          if (currentUser && appState === GameState.MENU) {
             setAppState(GameState.DASHBOARD);
           }
         }
@@ -176,8 +175,7 @@ const App: React.FC = () => {
       if (!unmounted) {
         setUser(u);
         // Also auto-direct to dashboard upon login
-        const currentPath = window.location.pathname;
-        if (u && (currentPath === '/' || currentPath === '/app' || currentPath === '/activate')) {
+        if (u && appState === GameState.MENU) {
           setAppState(GameState.DASHBOARD);
         }
       }
