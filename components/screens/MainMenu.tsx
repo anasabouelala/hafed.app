@@ -151,11 +151,11 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
     useEffect(() => {
         if (propUser) {
             setUser(propUser);
-            // Return to landing page once authenticated!
-            setStep(prev => prev === 'AUTH' ? 'HOME' : prev);
+            // Return to dashboard page once authenticated!
+            setStep('USER_HOME');
         } else if (propUser === null) {
             setUser(null);
-            setStep(prev => prev === 'USER_HOME' ? 'HOME' : prev);
+            setStep('HOME');
         }
     }, [propUser]);
 
@@ -165,7 +165,7 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
             if (u) {
                 setUser(u);
                 await syncFromCloud();
-                setStep(prev => prev === 'AUTH' ? 'HOME' : prev);
+                setStep('USER_HOME');
             }
         });
         return () => { data?.subscription.unsubscribe(); };
@@ -294,8 +294,8 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
             setSelectedSurah("");
             setSearchTerm("");
         } else if (step === 'USER_HOME') {
-            // Just go back to the shiny landing page but stay logged in!
-            setStep('HOME');
+            // Give them back to their personal Dashboard
+            onOpenDashboard();
         } else if (step === 'AUTH') {
             setStep('HOME');
         }
@@ -379,46 +379,24 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                                    {user ? (
-                                        <>
-                                            <button
-                                                className="text-slate-300 font-bold hover:text-red-400 transition-colors px-4 py-2 text-sm order-2 sm:order-1"
-                                                onClick={async () => {
-                                                    await authService.signOut();
-                                                    window.location.reload();
-                                                }}
-                                            >
-                                                تسجيل خروج
-                                            </button>
-                                            <button
-                                                onClick={() => { onOpenDashboard(); }}
-                                                className="bg-white text-slate-900 px-6 py-3 rounded-full font-black text-sm shadow-[0_4px_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_8px_0_#cbd5e1] active:translate-y-0 active:shadow-none transition-all flex items-center gap-2 order-1 sm:order-2"
-                                            >
-                                                لوحة التحكم المتميزة 🚀
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button
-                                                className="hidden md:block text-slate-300 font-bold hover:text-white transition-colors text-sm"
-                                                onClick={() => { }}
-                                            >
-                                                تواصل معنا
-                                            </button>
-                                            <button
-                                                className="text-white font-bold hover:text-cyan-300 transition-colors px-4 py-2"
-                                                onClick={() => { setStep('AUTH'); setAuthMode('LOGIN'); }}
-                                            >
-                                                دخول
-                                            </button>
-                                            <button
-                                                onClick={() => { setStep('AUTH'); setAuthMode('REGISTER'); }}
-                                                className="bg-white text-slate-900 px-6 py-3 rounded-full font-black text-sm shadow-[0_4px_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_8px_0_#cbd5e1] active:translate-y-0 active:shadow-none transition-all flex items-center gap-2"
-                                            >
-                                                جرب التطبيق ⚡
-                                            </button>
-                                        </>
-                                    )}
+                                    <button
+                                        className="hidden md:block text-slate-300 font-bold hover:text-white transition-colors text-sm"
+                                        onClick={() => { }}
+                                    >
+                                        تواصل معنا
+                                    </button>
+                                    <button
+                                        className="text-white font-bold hover:text-cyan-300 transition-colors px-4 py-2"
+                                        onClick={() => { setStep('AUTH'); setAuthMode('LOGIN'); }}
+                                    >
+                                        دخول
+                                    </button>
+                                    <button
+                                        onClick={() => { setStep('AUTH'); setAuthMode('REGISTER'); }}
+                                        className="bg-white text-slate-900 px-6 py-3 rounded-full font-black text-sm shadow-[0_4px_0_#cbd5e1] hover:-translate-y-1 hover:shadow-[0_8px_0_#cbd5e1] active:translate-y-0 active:shadow-none transition-all flex items-center gap-2"
+                                    >
+                                        جرب التطبيق ⚡
+                                    </button>
                                 </div>
                             </div>
 
@@ -475,23 +453,13 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
                                 </p>
 
                                 <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-8">
-                                    {user ? (
-                                        <button
-                                            onClick={() => setStep('USER_HOME')}
-                                            className="w-full md:w-auto bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-[0_10px_40px_rgba(16,185,129,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-                                        >
-                                            متابعة التعلم والحفظ
-                                            <ChevronRight className="rtl:rotate-180" />
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => { setStep('AUTH'); setAuthMode('REGISTER'); }}
-                                            className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-[0_10px_40px_rgba(79,70,229,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-                                        >
-                                            ابدأ رحلتك
-                                            <ChevronRight className="rtl:rotate-180" />
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => { setStep('AUTH'); setAuthMode('REGISTER'); }}
+                                        className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-5 rounded-2xl font-black text-xl shadow-[0_10px_40px_rgba(79,70,229,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                                    >
+                                        ابدأ رحلتك
+                                        <ChevronRight className="rtl:rotate-180" />
+                                    </button>
 
                                     <ActiveLearnersCounter />
                                 </div>
