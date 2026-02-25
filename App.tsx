@@ -12,6 +12,7 @@ import { GameState, GameMode, UserProfile } from './types';
 import { authService } from './services/authService';
 import { trialService } from './services/trialService';
 import { PremiumWelcomeModal } from './components/ui/PremiumWelcomeModal';
+import { SupportWidget } from './components/ui/SupportWidget';
 
 // ─── Gumroad product checkout ─────────────────────────────────────────────────
 const GUMROAD_URL = 'https://hafedapp.gumroad.com/l/mfkxjl?wanted=true';
@@ -379,6 +380,9 @@ const App: React.FC = () => {
         isOpen={showPremiumWelcome}
         onClose={handleCloseWelcome}
       />
+
+      {/* Global Support Widget */}
+      <SupportWidget />
     </div>
   );
 };
