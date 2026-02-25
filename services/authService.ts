@@ -197,26 +197,22 @@ export const authService = {
         if (error) throw error;
         return data;
     },
-
-    signOut() {
+    async signOut() {
         try {
-            // 1. Aggressively clear local storage BEFORE the network call
-            // Supabase stores tokens in keys like "sb-xxxxxx-auth-token"
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-                    localStorage.removeItem(key);
-                }
-            });
-            // Force clear the old auth token key just in case
-            localStorage.removeItem('supabase.auth.token');
+            // Sign out locally. This instantly drops the session from GoTrue memory
+            // and local storage without hanging on a network request.
+            await supabase.auth.signOut({ scope: 'local' });
         } catch (error) {
             console.error('Local storage clear error:', error);
         }
 
-        // 2. Perform the server-side logout in the background (fire and forget)
-        supabase.auth.signOut().catch(error => {
-            console.error('Sign out network error (ignored):', error);
+        // Failsafe aggressive cleanup
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                localStorage.removeItem(key);
+            }
         });
+        localStorage.removeItem('supabase.auth.token');
     },
 
     /** Verify a Gumroad license key and activate premium on the logged-in user */

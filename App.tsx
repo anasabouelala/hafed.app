@@ -262,18 +262,21 @@ const App: React.FC = () => {
 
   const handleOpenDashboard = useCallback(() => { setAppState(GameState.DASHBOARD); }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // 1. Instantly unmount the dashboard to give user feedback
     setUser(null);
     setAppState(GameState.MENU);
 
     // 2. Clear credentials safely from local storage manually & call server signout
-    authService.signOut();
+    await authService.signOut();
 
-    // 3. Optional: Clear the URL if it has ?license_key=xxx
+    // 3. Clear the URL to avoid license key bugs on reload
     if (window.location.search.includes('license_key')) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+
+    // 4. Force a hard reload so the browser has a completely fresh memory state
+    window.location.reload();
   };
 
   const handleExit = useCallback(() => {
