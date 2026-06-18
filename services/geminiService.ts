@@ -1,20 +1,16 @@
 
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { LevelData, QuestionType, DiagnosticResult, GameMode } from "../types";
 import { TAHA_QUIZ_DATA } from "../components/data/surahTahaQuestions";
 
 // --- Configuration ---
-// import { GoogleGenerativeAI } from "@google/generative-ai";
+// AI is powered by DeepSeek behind the /api/gemini proxy (see api/gemini.ts and
+// server/index.js). The API key lives only on the server, so it is never shipped to
+// the browser — in dev Vite proxies /api -> http://localhost:3001, in prod it's the
+// Vercel serverless function.
 
-const getApiKey = (): string | undefined => {
-    // In production (Vercel), we don't expose the key to the client.
-    // We return 'SERVER_MANAGED' to signal that we should use the proxy.
-    if (!import.meta.env.DEV) {
-        return 'SERVER_MANAGED';
-    }
-
-    // In development, we use the local env key for direct access (faster iteration)
-    return import.meta.env.VITE_GEMINI_API_KEY;
+const getApiKey = (): string => {
+    // 'SERVER_MANAGED' signals "use the proxy" in both dev and prod.
+    return 'SERVER_MANAGED';
 };
 
 // --- DATA: Surah Mapping for Public API ---
@@ -39,14 +35,10 @@ const getSurahNumber = (name: string): number => {
 };
 
 // --- MODEL FALLBACK STRATEGY (Shared) ---
+// DeepSeek serves our needs from a single chat model. The proxy picks the concrete
+// model via the DEEPSEEK_MODEL env var; this list just drives the retry loop.
 const MODELS_TO_TRY = [
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-2.0-flash-exp",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro",
-    "gemini-1.0-pro"
+    "deepseek-chat"
 ];
 
 // --- PER-MODEL RATE LIMIT TRACKING ---
@@ -85,8 +77,6 @@ async function generateContentWithFallback(
         modelParams?: any
     }
 ) {
-    const isServerManaged = apiKey === 'SERVER_MANAGED';
-
     let lastError;
 
     for (const modelName of MODELS_TO_TRY) {
@@ -97,47 +87,28 @@ async function generateContentWithFallback(
         }
 
         try {
-            console.log(`🤖 [Fallback] Trying model: ${modelName} (${isServerManaged ? 'PROXY' : 'DIRECT'})`);
+            console.log(`🤖 [Fallback] Trying model: ${modelName} (DeepSeek proxy)`);
 
-            let text = "";
-
-            if (isServerManaged) {
-                // Use Vercel Serverless Function
-                const response = await fetch('/api/gemini', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        modelName,
-                        prompt: params.prompt,
-                        systemInstruction: params.systemInstruction,
-                        jsonMode: params.jsonMode,
-                        modelParams: params.modelParams
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `Server Error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                text = data.text;
-            } else {
-                // Direct Client-Side Call (Dev Mode Only)
-                const genAI = new GoogleGenerativeAI(apiKey);
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
+            // All AI runs through the DeepSeek-backed /api/gemini proxy (dev + prod),
+            // so the API key stays server-side and is never shipped to the browser.
+            const response = await fetch('/api/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    modelName,
+                    prompt: params.prompt,
                     systemInstruction: params.systemInstruction,
-                    generationConfig: {
-                        responseMimeType: params.jsonMode ? "application/json" : "text/plain",
-                        ...params.modelParams
-                    }
-                });
+                    jsonMode: params.jsonMode,
+                    modelParams: params.modelParams
+                })
+            });
 
-                const result = await model.generateContent(params.prompt);
-                const response = await result.response;
-                text = response.text();
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Server Error: ${response.status}`);
             }
+
+            const { text } = await response.json();
 
             console.log(`✅ [Fallback] Model ${modelName} succeeded!`);
             // Return a mock response object compatible with existing code
@@ -310,7 +281,7 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
                 const wordList = Array.from(firstWordsNeeded);
                 const response = await generateContentWithFallback(apiKey, {
                     prompt: `For each of these ${wordList.length} Arabic words, find 3 distinct Quranic verses that START with that exact word:\n${wordList.map((w, i) => `${i + 1}. "${w}"`).join('\n')}`,
-                    systemInstruction: `You are a strict Quran expert.\nFor each numbered word, find 3 real Quranic verses starting with that word.\nOutput JSON: { "words": { "1": ["verse1", "verse2", "verse3"], "2": [...] } }\nRules: 100% accurate Uthmani script. Choose from different Surahs.`,
+                    systemInstruction: `You are a strict Quran expert.\nFor each numbered word, return 3 REAL Quranic verses that BEGIN with that exact word as their first word.\nOutput JSON: { "words": { "1": ["verse1", "verse2", "verse3"], "2": [...] } }\nRules: 100% accurate Uthmani script with full tashkeel. Choose from different Surahs.`,
                     jsonMode: true,
                     modelParams: { temperature: 0.3 }
                 });
@@ -328,6 +299,39 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
                 console.log(`[Bridge AI Batch] Got verses for ${Object.keys(batchedBridgeVerses).length} words in 1 API call`);
             } catch (e) {
                 console.warn('[Bridge AI Batch] Failed, will use procedural:', e);
+            }
+        }
+    }
+
+    // SURFER / SURVIVOR: Batch-fetch meaningful per-word distractors (real, confusable
+    // Quranic words) in ONE call, so the catch-the-word games stop showing random fragments.
+    let batchedWordChallenges: Record<string, string[]> = {};
+    if ((mode === 'SURF' || mode === 'SURVIVOR') && apiKey && !allModelsExhausted()) {
+        const uniqueWords = Array.from(new Set(
+            activeVerses.flatMap(v => v.text.split(' ').map(w => w.trim()).filter(w => w.length > 1))
+        )).slice(0, 40); // cap so the prompt stays small
+        if (uniqueWords.length > 0) {
+            try {
+                const response = await generateContentWithFallback(apiKey, {
+                    prompt: `For EACH of these ${uniqueWords.length} Arabic Quranic words, give 3 DIFFERENT real Quranic words that are easy to confuse with it (similar root, shape, rhyme or letters) but are NOT the same word:\n${uniqueWords.map((w, i) => `${i + 1}. "${w}"`).join('\n')}`,
+                    systemInstruction: `You generate confusable distractor words for a Quran memorization game.\nRules:\n1. Every distractor MUST be a REAL word that occurs in the Quran, in UTHMANI script with FULL TASHKEEL.\n2. Distractors must DIFFER from the given word but be visually/phonetically similar so they are tempting.\n3. NEVER invent or transliterate words.\nOutput JSON: { "words": { "1": ["w1","w2","w3"], "2": [...] } }`,
+                    jsonMode: true,
+                    modelParams: { temperature: 0.7 }
+                });
+                const text = response.text();
+                const jsonStr = text.includes('```') ? text.replace(/```json/g, '').replace(/```/g, '').trim() : text;
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.words) {
+                    Object.entries(parsed.words).forEach(([key, frags]: [string, any]) => {
+                        const idx = parseInt(key) - 1;
+                        if (idx >= 0 && idx < uniqueWords.length && Array.isArray(frags)) {
+                            batchedWordChallenges[uniqueWords[idx]] = frags.filter((f: any) => typeof f === 'string' && f.trim().length > 1 && f !== uniqueWords[idx]);
+                        }
+                    });
+                }
+                console.log(`[Surfer AI Batch] Got distractors for ${Object.keys(batchedWordChallenges).length} words in 1 API call`);
+            } catch (e) {
+                console.warn('[Surfer AI Batch] Failed, will use procedural:', e);
             }
         }
     }
@@ -436,24 +440,36 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
             });
 
         } else if (mode === 'SURF' || mode === 'SURVIVOR') {
-            // Smart Distractors from other verses
-            const otherWords = allFetched
-                .filter(v => v.numberInSurah !== verse.numberInSurah)
-                .map(v => v.text)
-                .join(' ')
-                .split(' ')
-                .filter(w => w.trim().length > 0);
+            // Per-word challenges: each correct word gets 2-3 confusable REAL Quranic words
+            // from the AI batch; fall back to real words from OTHER verses (never gibberish).
+            const otherVerseWords = Array.from(new Set(
+                allFetched
+                    .filter(v => v.numberInSurah !== verse.numberInSurah)
+                    .flatMap(v => v.text.split(' ').map(w => w.trim()))
+                    .filter(w => w.length > 1)
+            ));
 
-            // Shuffle and pick 3 unique distractors
-            const distractors = Array.from(new Set(otherWords))
-                .sort(() => Math.random() - 0.5)
-                .slice(0, 4);
+            const correctNorm = new Set(words.map(removeTashkeel));
+            const wordChallenges = words.map(w => {
+                const wNorm = removeTashkeel(w);
+                // Drop any AI distractor equal to the answer ignoring tashkeel (look-alikes).
+                let d = (batchedWordChallenges[w] || []).filter(x => removeTashkeel(x) !== wNorm);
+                if (d.length < 2) {
+                    const filler = otherVerseWords
+                        .filter(x => !correctNorm.has(removeTashkeel(x)) && !d.some(y => removeTashkeel(y) === removeTashkeel(x)))
+                        .sort(() => Math.random() - 0.5)
+                        .slice(0, 2 - d.length);
+                    d = [...d, ...filler];
+                }
+                return { word: w, distractors: d.slice(0, 3) };
+            });
 
-            // Fallback safe strings if not enough unique words found
+            // Flat pool used by the Surfer game — real words, deduped, and never equal to a
+            // correct word (compared ignoring tashkeel so look-alikes don't leak through).
+            const distractors = Array.from(new Set(wordChallenges.flatMap(c => c.distractors)))
+                .filter(x => !correctNorm.has(removeTashkeel(x)));
             while (distractors.length < 3) {
-                distractors.push("ٱلۡعَٰلَمِينَ");
-                distractors.push("مُّسۡتَقِيم");
-                distractors.push("حَكِيم");
+                distractors.push("ٱلۡعَٰلَمِينَ", "مُّسۡتَقِيم", "حَكِيم");
             }
 
             questions.push({
@@ -463,7 +479,7 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
                 points: 300,
                 prompt: "التقط كلمات الآية الصحيحة",
                 arabicText: verse.text,
-                surferData: { words: words, distractors: distractors },
+                surferData: { words: words, distractors, wordChallenges },
                 hint: "",
             });
 
@@ -576,8 +592,11 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
                     // Use pre-fetched batch results (no API call here)
                     const batchVerses = batchedBridgeVerses[firstWord];
                     if (batchVerses && batchVerses.length > 0) {
+                        // Validate tashkeel-insensitively: keep real same-start verses,
+                        // drop hallucinations, without rejecting good ones over diacritics.
+                        const firstWordNorm = removeTashkeel(firstWord);
                         verseOptions = batchVerses
-                            .filter(v => v.startsWith(firstWord) && v !== fullNextVerse)
+                            .filter(v => removeTashkeel(v).startsWith(firstWordNorm) && v !== fullNextVerse)
                             .slice(0, 2);
                         if (verseOptions.length >= 2) {
                             console.log(`[Bridge] Using ${verseOptions.length} batched AI verses for word "${firstWord}"`);

@@ -27,6 +27,8 @@ interface Props {
 
 const MAX_LIVES = 3;
 const TIME_BUDGET = 120;
+// Each level tightens the clock (timed modes) to ramp difficulty, floored at 45s.
+const timeBudgetFor = (level: number) => Math.max(45, TIME_BUDGET - (level - 1) * 15);
 
 export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVerse, gameMode, config, onExit }) => {
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,8 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
 
   // Progression System
   const [startVerse, setStartVerse] = useState(initialVerse);
+  const [level, setLevel] = useState(1);          // in-game difficulty level (verse chunk #)
+  const levelRef = React.useRef(1);               // immediate read for loadLevel (avoids stale state)
 
   // Game State
   const [score, setScore] = useState(0);
@@ -100,8 +104,8 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
       setLevelData(data);
       setCurrentQuestionIdx(0);
       setGameState(GameState.PLAYING);
-      // Reset timer
-      setTimeLeft(TIME_BUDGET);
+      // Reset timer (shorter at higher levels)
+      setTimeLeft(timeBudgetFor(levelRef.current));
       setStats(prev => ({ ...prev, totalQuestions: prev.totalQuestions + (data.questions.length || 0) }));
     } catch (e) {
       console.error("❌ Level Load Failed:", e);
@@ -366,6 +370,11 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
     if (endVerse && nextOffset > endVerse) {
       return;
     }
+    // Advance difficulty level; update the ref immediately so loadLevel's timer is correct.
+    const nextLevel = level + 1;
+    levelRef.current = nextLevel;
+    setLevel(nextLevel);
+
     setStartVerse(nextOffset);
     // Reset Diagnostic State
     setDiagnosticResult(null);
@@ -379,6 +388,8 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
     setScore(0);
     setLives(MAX_LIVES);
     setStreak(0);
+    levelRef.current = 1;
+    setLevel(1);
     setTimeLeft(TIME_BUDGET);
     setStats({
       score: 0,
@@ -441,6 +452,7 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
       <GameOver
         stats={stats}
         isVictory={gameState === GameState.VICTORY}
+        level={level}
         nextStartVerse={nextStart}
         onRestart={handleRestart}
         onNextLevel={hasMore ? handleNextLevel : onExit}
@@ -518,6 +530,7 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
             <h2 className="text-white/90 font-arabic text-sm tracking-wide drop-shadow-md bg-slate-900/40 px-4 py-1 rounded-full border border-white/5 backdrop-blur-sm">
               {surahName} <span className="text-slate-500 mx-2">|</span> <span className="text-emerald-400 font-arcade text-xs">{startVerse + currentQuestionIdx}</span>
+              <span className="text-slate-500 mx-2">|</span> <span className="text-arcade-yellow font-arcade text-xs">مستوى {level}</span>
             </h2>
           </div>
 

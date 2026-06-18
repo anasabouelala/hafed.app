@@ -243,6 +243,41 @@ export const authService = {
         }
     },
 
+    /** Credit XP to the logged-in user's cloud profile (profiles.xp). Guests are
+     *  local-only and return null. Level is derived from XP (1000 XP per level). */
+    async addXp(xpDelta: number): Promise<{ xp: number; level: number } | null> {
+        try {
+            const delta = Math.round(xpDelta || 0);
+            if (delta <= 0) return null;
+
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return null; // not signed in — nothing to persist
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('xp, level')
+                .eq('auth_user_id', session.user.id)
+                .maybeSingle();
+
+            const newXp = (profile?.xp || 0) + delta;
+            const newLevel = Math.max(1, Math.floor(newXp / 1000) + 1);
+
+            const { error } = await supabase
+                .from('profiles')
+                .update({ xp: newXp, level: newLevel })
+                .eq('auth_user_id', session.user.id);
+
+            if (error) {
+                console.warn('[Auth] addXp failed:', error.message);
+                return null;
+            }
+            return { xp: newXp, level: newLevel };
+        } catch (e) {
+            console.error('[Auth] addXp error:', e);
+            return null;
+        }
+    },
+
     onAuthStateChange(callback: (user: UserProfile | null) => void) {
         return supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session?.user) {

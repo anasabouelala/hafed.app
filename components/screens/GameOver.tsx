@@ -8,13 +8,15 @@ import { motion } from 'framer-motion';
 interface Props {
   stats: PlayerStats;
   isVictory: boolean;
+  level?: number;
   nextStartVerse: number;
   onRestart: () => void;
   onNextLevel: () => void;
   onHome: () => void;
 }
 
-export const GameOver: React.FC<Props> = ({ stats, isVictory, nextStartVerse, onRestart, onNextLevel, onHome }) => {
+export const GameOver: React.FC<Props> = ({ stats, isVictory, level = 1, nextStartVerse, onRestart, onNextLevel, onHome }) => {
+  const xpEarned = Math.round((stats.score || 0) / 10);
   const chartData = [
     { name: 'صحيح', value: stats.correctAnswers, color: '#22c55e' },
     { name: 'خطأ', value: stats.totalQuestions - stats.correctAnswers, color: '#ef4444' },
@@ -36,17 +38,25 @@ export const GameOver: React.FC<Props> = ({ stats, isVictory, nextStartVerse, on
         <div className="text-center mb-8">
           <div className="text-5xl mb-4 animate-float">{isVictory ? '🌟' : '💪'}</div>
           <h2 className={`text-3xl md:text-4xl font-arcade mb-2 ${isVictory ? 'text-arcade-yellow' : 'text-slate-300'}`}>
-            {isVictory ? 'تم اجتياز القطاع!' : 'استمر في المحاولة!'}
+            {isVictory ? `اكتمل المستوى ${level}!` : 'استمر في المحاولة!'}
           </h2>
           <p className="text-slate-400 font-arcade text-sm">
             {isVictory ? `جاهز للآيات ${nextStartVerse}+` : 'كل محاولة تقربك من الإتقان ✨'}
           </p>
         </div>
 
-        <div className="flex justify-center mb-8">
-          <div className="bg-slate-900 rounded-2xl p-4 border border-slate-700 flex flex-col items-center w-full">
-            <span className="text-arcade-cyan font-arcade text-[12px] mb-2">مجموع النقاط</span>
-            <span className="text-4xl font-arcade text-white drop-shadow-lg">{stats.score}</span>
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="bg-slate-900 rounded-2xl p-4 border border-arcade-yellow/40 flex flex-col items-center justify-center">
+            <span className="text-arcade-yellow font-arcade text-[11px] mb-2">المستوى</span>
+            <span className="text-3xl font-arcade text-white drop-shadow-lg">{level}</span>
+          </div>
+          <div className="bg-slate-900 rounded-2xl p-4 border border-arcade-cyan/40 flex flex-col items-center justify-center">
+            <span className="text-arcade-cyan font-arcade text-[11px] mb-2">مجموع النقاط</span>
+            <span className="text-3xl font-arcade text-white drop-shadow-lg">{stats.score}</span>
+          </div>
+          <div className="bg-slate-900 rounded-2xl p-4 border border-emerald-500/40 flex flex-col items-center justify-center">
+            <span className="text-emerald-400 font-arcade text-[11px] mb-2">+ خبرة</span>
+            <span className="text-3xl font-arcade text-white drop-shadow-lg">{xpEarned}</span>
           </div>
         </div>
 

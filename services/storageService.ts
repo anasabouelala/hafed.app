@@ -1,5 +1,6 @@
 
 import { supabase } from './supabaseClient';
+import { authService } from './authService';
 import { GlobalStats, SurahStats } from '../types';
 
 // Placeholder for storage service - implementation for Dashboard
@@ -30,8 +31,9 @@ export const saveDiagnosticResult = async (surahName: string, score: number, sta
             surah_name: surahName,
             mastery_level: score,
             last_played: new Date().toISOString(),
-            // We would need to properly map user_id here but RLS or auth context might handle it
-        }, { onConflict: 'surah_name' });
+            // user_id is filled in automatically by the set_progress_user_id() trigger
+            // from the caller's profile (see supabase/migrations).
+        }, { onConflict: 'user_id,surah_name' });
 
         if (error) {
             console.warn('[Storage] Diagnostic save warning (Supabase):', error.message);
@@ -201,13 +203,18 @@ export const saveGameSession = async (surahName: string, score: number, accuracy
         // Streak logic would go here (checking last login/play date)
         saveGlobalStats(global);
 
+        // 2b. Mirror the XP gain to the logged-in user's cloud profile (guests stay
+        // local-only). Fire-and-forget so it never blocks the GameOver screen.
+        authService.addXp(score / 10).catch(() => { });
+
         // 3. Sync to Supabase
         const { error } = await supabase.from('user_surah_progress').upsert({
             surah_name: surahName,
-            high_score: surah.highScore, // Ensure DB has this column or use relevant one
+            high_score: surah.highScore,
             mastery_level: surah.masteryLevel,
             last_played: new Date().toISOString()
-        }, { onConflict: 'surah_name' });
+            // user_id auto-filled by the set_progress_user_id() trigger.
+        }, { onConflict: 'user_id,surah_name' });
 
         if (error) console.warn('[Storage] Failed to sync game session to cloud', error);
 
