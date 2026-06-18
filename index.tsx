@@ -9,23 +9,39 @@ import App from './App';
 // code awaits. A network blip or a stale/cleared token (e.g. after our manual
 // localStorage signout cleanup) makes those reject with nothing to catch them,
 // surfacing to users as "Unhandled Promise Rejection ... assets/supabase-*.js".
-// They are non-fatal: auth recovers on the next tick or user action. We log and
-// suppress that specific noise; anything we don't recognise is left untouched so
-// genuine bugs still surface (and still hit the ErrorBoundary / console).
+// They are non-fatal: auth recovers on the next tick or user action.
+//
+// Detection is twofold so we don't depend on one brittle string:
+//   1. Stack ORIGIN — anything thrown from the Supabase/GoTrue bundle (prod:
+//      assets/supabase-*.js; dev: @supabase/* / gotrue-js / auth-js). This alone
+//      catches the reported error regardless of wording.
+//   2. Message/name patterns — GoTrue error classes, network "failed to fetch",
+//      Web Locks phrasings ("Acquiring an exclusive Navigator LockManager lock…")
+//      and token-refresh failures, for cases where the stack is stripped.
+// Anything we don't recognise is left untouched so genuine bugs still surface.
 // ─────────────────────────────────────────────────────────────────────────────
 window.addEventListener('unhandledrejection', (event) => {
-  const reason = event.reason as { name?: string; message?: string } | undefined;
-  const text = `${reason?.name ?? ''} ${reason?.message ?? reason ?? ''}`.toLowerCase();
+  const reason = event.reason as { name?: string; message?: string; stack?: string } | undefined;
+  const name = String(reason?.name ?? '');
+  const message = String(reason?.message ?? (typeof reason === 'string' ? reason : ''));
+  const stack = String(reason?.stack ?? '');
+  const hay = `${name} ${message} ${stack}`.toLowerCase();
 
   const isBenignAuthNoise =
-    /auth(retryablefetch|api|sessionmissing)error/.test(text) ||
-    /failed to fetch|networkerror|load failed|fetch aborted|aborterror/.test(text) ||
-    /navigator\.?locks?|lock.*(acquire|timeout)|acquire.*timeout/.test(text) ||
-    /refresh.*token|token.*refresh/.test(text);
+    // 1. thrown from the Supabase / GoTrue bundle (by stack origin)
+    /supabase|gotrue|auth-js/.test(hay) ||
+    // 2a. GoTrue error classes
+    /auth(retryablefetch|api|sessionmissing|unknown|weakpassword)error/.test(hay) ||
+    // 2b. network failures during background fetch / refresh
+    /failed to fetch|networkerror|network request failed|load failed|err_network|fetch.*abort|abort(ed|error)/.test(hay) ||
+    // 2c. Web Locks API (cross-tab auth coordination) — tolerate word order/phrasing
+    /lockmanager|navigator ?\.?locks?|acquir\w*\b[\s\S]*lock|lock[\s\S]*(acquir|timeout|failed)/.test(hay) ||
+    // 2d. token refresh
+    /refresh.*token|token.*refresh/.test(hay);
 
   if (isBenignAuthNoise) {
-    console.warn('[hafed] Suppressed benign background rejection:', reason?.name || reason?.message || reason);
-    event.preventDefault(); // stop it being reported as an Unhandled Promise Rejection
+    console.warn('[hafed] Suppressed benign background rejection:', name || message || reason);
+    event.preventDefault(); // keep it from surfacing as an Unhandled Promise Rejection
   }
 });
 
