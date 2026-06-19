@@ -242,7 +242,7 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
             const verseList = activeVerses.map((v, i) => `${i + 1}. "${v.text}"`).join('\n');
             const response = await generateContentWithFallback(apiKey, {
                 prompt: `Surah: ${surah}\n\nFor EACH of these ${activeVerses.length} verses, generate 4 misleading Quranic fragments (3-5 words each) that are similar but from OTHER Surahs:\n${verseList}`,
-                systemInstruction: `You are a Quran expert generating distractor fragments for a verse assembly game.\nRules:\n1. Each fragment MUST be 3-5 words of REAL, AUTHENTIC Quranic text in UTHMANI SCRIPT with FULL TASHKEEL (diacritical marks)\n2. Fragments must be CONTIGUOUS words from actual Quranic verses — NEVER hallucinate or combine words from different verses\n3. Must NOT be from the given verse's Surah\n4. Should be thematically or structurally similar to confuse the player\n5. Output JSON: { "verses": { "1": ["frag1", "frag2", "frag3", "frag4"], "2": [...] } }`,
+                systemInstruction: `You are a Quran expert generating CREDIBLE distractor fragments for a verse assembly game.\nRules:\n1. Each fragment MUST be 3-5 CONTIGUOUS words of REAL, AUTHENTIC Quranic text in UTHMANI SCRIPT with FULL TASHKEEL — copied verbatim from an actual verse, NEVER hallucinated or stitched together.\n2. Take fragments from OTHER Surahs (not the given verse's Surah).\n3. Each fragment should look like it could belong to the SAME verse — similar length, rhythm and theme — so it is a believable decoy, not an obvious mismatch.\n4. Output JSON: { "verses": { "1": ["frag1", "frag2", "frag3", "frag4"], "2": [...] } }`,
                 jsonMode: true,
                 modelParams: { temperature: 0.9 }
             });
@@ -303,6 +303,48 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
         }
     }
 
+    // BRIDGE: Batch-fetch credible single-word decoys (real Quranic verse-openers) for
+    // each next-verse first word, so the word-choice step stops showing random words.
+    let batchedBridgeWordDistractors: Record<string, string[]> = {};
+    if ((mode === 'CLASSIC' || mode === 'LEARN') && apiKey && !allModelsExhausted()) {
+        const wordsNeeded = new Set<string>();
+        for (const verse of activeVerses) {
+            if (verse.numberInSurah < (effectiveEndVerse || 999)) {
+                const nextVerse = allFetched.find(v => v.numberInSurah === verse.numberInSurah + 1);
+                if (nextVerse) {
+                    const nw = nextVerse.text.split(' ').filter(w => w.trim().length > 0);
+                    if (nw.length >= 3) wordsNeeded.add(nw[0]);
+                }
+            }
+        }
+        if (wordsNeeded.size > 0) {
+            try {
+                const wl = Array.from(wordsNeeded);
+                const response = await generateContentWithFallback(apiKey, {
+                    prompt: `For EACH of these ${wl.length} Arabic words (each BEGINS a Quranic verse), give 3 OTHER real Quranic words that ALSO commonly begin Quranic verses or clauses — credible decoys, all DIFFERENT from the given word:\n${wl.map((w, i) => `${i + 1}. "${w}"`).join('\n')}`,
+                    systemInstruction: `You are a Quran expert creating CREDIBLE word decoys for a memorization game.\nFor each numbered word, return 3 REAL Arabic words that frequently START Quranic verses/clauses (e.g. إِنَّ، قُلْ، وَمَا، يَٰٓأَيُّهَا، ٱلَّذِينَ، مَن) and are tempting but WRONG alternatives to it.\nRules: real Quranic words only, UTHMANI script with full tashkeel, each DIFFERENT from the given word.\nOutput JSON: { "words": { "1": ["w1","w2","w3"], "2": [...] } }`,
+                    jsonMode: true,
+                    modelParams: { temperature: 0.6 }
+                });
+                const text = response.text();
+                const jsonStr = text.includes('```') ? text.replace(/```json/g, '').replace(/```/g, '').trim() : text;
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.words) {
+                    Object.entries(parsed.words).forEach(([key, ws]: [string, any]) => {
+                        const idx = parseInt(key) - 1;
+                        if (idx >= 0 && idx < wl.length && Array.isArray(ws)) {
+                            const cn = removeTashkeel(wl[idx]);
+                            batchedBridgeWordDistractors[wl[idx]] = ws.filter((w: any) => typeof w === 'string' && w.trim().length > 0 && removeTashkeel(w) !== cn);
+                        }
+                    });
+                }
+                console.log(`[Bridge Words AI Batch] Got word decoys for ${Object.keys(batchedBridgeWordDistractors).length} words`);
+            } catch (e) {
+                console.warn('[Bridge Words AI Batch] Failed, will use procedural:', e);
+            }
+        }
+    }
+
     // SURFER / SURVIVOR: Batch-fetch meaningful per-word distractors (real, confusable
     // Quranic words) in ONE call, so the catch-the-word games stop showing random fragments.
     let batchedWordChallenges: Record<string, string[]> = {};
@@ -314,7 +356,7 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
             try {
                 const response = await generateContentWithFallback(apiKey, {
                     prompt: `For EACH of these ${uniqueWords.length} Arabic Quranic words, give 3 DIFFERENT real Quranic words that are easy to confuse with it (similar root, shape, rhyme or letters) but are NOT the same word:\n${uniqueWords.map((w, i) => `${i + 1}. "${w}"`).join('\n')}`,
-                    systemInstruction: `You generate confusable distractor words for a Quran memorization game.\nRules:\n1. Every distractor MUST be a REAL word that occurs in the Quran, in UTHMANI script with FULL TASHKEEL.\n2. Distractors must DIFFER from the given word but be visually/phonetically similar so they are tempting.\n3. NEVER invent or transliterate words.\nOutput JSON: { "words": { "1": ["w1","w2","w3"], "2": [...] } }`,
+                    systemInstruction: `You generate CREDIBLE distractor words for a Quran memorization game.\nFor each given word, return 3 REAL, COMMON Quranic words a reciter could plausibly confuse with it — similar in root, shape, rhyme or meaning — so each decoy is tempting but wrong.\nRules: real Quranic words only, UTHMANI script with full tashkeel, each DIFFERENT from the given word, never invent or transliterate.\nOutput JSON: { "words": { "1": ["w1","w2","w3"], "2": [...] } }`,
                     jsonMode: true,
                     modelParams: { temperature: 0.7 }
                 });
@@ -561,29 +603,27 @@ const generateProceduralLevel = async (surah: string, startVerse: number, endVer
                     };
 
                     // ========== STEP 2: WORD DISTRACTORS (single words) ==========
-                    let wordDistractors: string[] = [];
+                    // Prefer AI-generated CREDIBLE verse-opening decoys; fall back to real
+                    // first-words from other verses, then a curated list of common openers.
+                    const fwNorm = removeTashkeel(firstWord);
+                    let wordDistractors: string[] = Array.from(new Set(
+                        (batchedBridgeWordDistractors[firstWord] || []).filter(w => removeTashkeel(w) !== fwNorm)
+                    )).slice(0, 2);
 
-                    // Collect first words from other verses as word distractors
-                    const wordPool = allFetched
-                        .filter(v => v.numberInSurah !== nextVerse.numberInSurah)
-                        .map(v => {
-                            const words = v.text.split(' ').filter(w => w.trim().length > 0);
-                            return words[0];
-                        })
-                        .filter(w => w && w !== firstWord); // Not the correct word
+                    if (wordDistractors.length < 2) {
+                        const wordPool = allFetched
+                            .filter(v => v.numberInSurah !== nextVerse.numberInSurah)
+                            .map(v => v.text.split(' ').filter(w => w.trim().length > 0)[0])
+                            .filter(w => w && removeTashkeel(w) !== fwNorm && !wordDistractors.some(d => removeTashkeel(d) === removeTashkeel(w)));
+                        const extra = Array.from(new Set(wordPool)).sort(() => Math.random() - 0.5).slice(0, 2 - wordDistractors.length);
+                        wordDistractors = [...wordDistractors, ...extra];
+                    }
 
-                    // Shuffle and pick 2
-                    wordDistractors = Array.from(new Set(wordPool))
-                        .sort(() => Math.random() - 0.5)
-                        .slice(0, 2);
-
-                    // Fallback single-word pool if not enough
+                    // Curated common verse-openers as a last resort.
                     const fallbackWords = ["قَالَ", "وَمَا", "إِنَّ", "فَلَمَّا", "يَا", "وَقَالَ", "فَإِنَّ", "أَلَمْ"];
                     while (wordDistractors.length < 2) {
-                        const candidate = fallbackWords[wordDistractors.length];
-                        if (candidate !== firstWord) {
-                            wordDistractors.push(candidate);
-                        }
+                        const candidate = fallbackWords.find(c => removeTashkeel(c) !== fwNorm && !wordDistractors.some(d => removeTashkeel(d) === removeTashkeel(c)));
+                        if (candidate) wordDistractors.push(candidate); else break;
                     }
 
                     // ========== STEP 3: FULL VERSE OPTIONS (all start with same word) ==========
