@@ -1946,22 +1946,25 @@ export const MainMenu: React.FC<Props> = ({ onStartGame, onStartDiagnostic, onOp
                                             </button>
                                         </div>
 
-                                        {/* SECTION: ASSESSMENT (QUIZ) — COMING SOON */}
-                                        <div className="w-full bg-slate-800/40 border border-slate-700/50 p-6 rounded-[1.5rem] text-right relative overflow-hidden opacity-60 cursor-not-allowed">
-                                            <div className="absolute left-0 top-0 h-full w-2 bg-slate-600"></div>
+                                        {/* SECTION: ASSESSMENT (QUIZ) */}
+                                        <button
+                                            onClick={() => handleGameStart('QUIZ')}
+                                            className="w-full bg-gradient-to-l from-indigo-900/40 to-slate-800/40 border border-indigo-500/40 hover:border-indigo-400 p-6 rounded-[1.5rem] text-right relative overflow-hidden transition-all hover:scale-[1.01] active:scale-95 group"
+                                        >
+                                            <div className="absolute left-0 top-0 h-full w-2 bg-indigo-500"></div>
                                             <div className="flex items-center justify-between relative z-10">
                                                 <div className="flex items-center gap-6">
-                                                    <div className="bg-slate-700/50 p-4 rounded-2xl">
-                                                        <Brain className="text-slate-500 w-8 h-8" />
+                                                    <div className="bg-indigo-600/30 p-4 rounded-2xl group-hover:bg-indigo-600/50 transition-colors">
+                                                        <Brain className="text-indigo-300 w-8 h-8" />
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-2xl font-black text-slate-400">التحدي الذكي (Quiz)</h4>
-                                                        <p className="text-slate-600 text-sm font-medium mt-1">ألغاز تدبرية، معاني كلمات، واختبارات فهم عميق.</p>
+                                                        <h4 className="text-2xl font-black text-white">التحدي الذكي (Quiz)</h4>
+                                                        <p className="text-slate-400 text-sm font-medium mt-1">معاني الكلمات، التفسير، وأسباب النزول — أسئلة ذكية تُولّد بالذكاء الاصطناعي.</p>
                                                     </div>
                                                 </div>
-                                                <span className="bg-slate-700 text-slate-400 text-xs font-black px-3 py-1.5 rounded-full border border-slate-600 shrink-0">🔒 قريباً</span>
+                                                <span className="bg-indigo-500 text-white text-xs font-black px-4 py-1.5 rounded-full border border-indigo-400 shrink-0">ابدأ ⚡</span>
                                             </div>
-                                        </div>
+                                        </button>
 
                                         {/* SECTION: ARCADE MINI-GAMES */}
                                         <div>
