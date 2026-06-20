@@ -44,6 +44,14 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
   const [score, setScore] = useState(0);
   const scoreRef = React.useRef(0); // synchronous mirror of score (endGame reads this, not the stale closure)
   const addScore = (pts: number) => { scoreRef.current += pts; setScore(scoreRef.current); };
+  // Dedupe answer handling: process at most one answer per question. Stray repeat fires
+  // (a double-tap, or the countdown timing out as a click lands) would otherwise each bump
+  // currentQuestionIdx off the same stale value, overshooting the questions array — which
+  // makes the render guard hit `!currentQuestion` and blank the whole screen.
+  const lastHandledIdxRef = React.useRef<number>(-1);
+  // Always-fresh handleAnswer for the timer (its interval only re-subscribes on
+  // gameState/gameMode change, so a direct call would freeze currentQuestionIdx).
+  const handleAnswerRef = React.useRef<(isCorrect: boolean, overrideScore?: number) => void>(() => {});
   const [lives, setLives] = useState(MAX_LIVES);
   const [streak, setStreak] = useState(0);
   const [timeLeft, setTimeLeft] = useState(TIME_BUDGET);
@@ -139,6 +147,9 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
     };
   }, [loadLevel, initialVerse, surahName]);
 
+  // New batch/level loaded → clear the per-question dedupe so its first question answers.
+  useEffect(() => { lastHandledIdxRef.current = -1; }, [levelData]);
+
   // Background Batch Preloading for Continuous Bridge Mode
   const loadNextBatchInBackground = useCallback(async () => {
     if (isLoadingNext || !levelData || gameMode !== 'CLASSIC') return;
@@ -184,7 +195,7 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 0) {
-          handleAnswer(false);
+          handleAnswerRef.current(false);
           return 5; // Penalty pause
         }
         return prev - 1;
@@ -206,6 +217,12 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
 
   const handleAnswer = useCallback((isCorrect: boolean, overrideScore?: number) => {
     if (gameState !== GameState.PLAYING) return;
+
+    // Process at most one answer per question (see lastHandledIdxRef). Two calls sharing
+    // the same stale currentQuestionIdx would both pass the "< length - 1" guard below and
+    // each advance the index, running it past the last question → blank screen.
+    if (lastHandledIdxRef.current === currentQuestionIdx) return;
+    lastHandledIdxRef.current = currentQuestionIdx;
 
     if (isCorrect) {
       // Calculate Score
@@ -319,6 +336,23 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
       endGame(true);
     }
   }, [startVerse, levelData, endVerse]);
+
+  // Keep the timer's handler reference current (see handleAnswerRef).
+  useEffect(() => { handleAnswerRef.current = handleAnswer; }, [handleAnswer]);
+
+  // Safety net: should the index ever run past the last question while still PLAYING
+  // (a race that slipped past the dedupe), complete the level rather than letting the
+  // render guard return null and blank the screen.
+  useEffect(() => {
+    if (
+      gameState === GameState.PLAYING &&
+      levelData &&
+      levelData.questions.length > 0 &&
+      currentQuestionIdx >= levelData.questions.length
+    ) {
+      handleLevelComplete();
+    }
+  }, [currentQuestionIdx, gameState, levelData, handleLevelComplete]);
 
   // Analysis State
   const [diagnosticResult, setDiagnosticResult] = useState<any>(null); // Type DiagnosticResult
@@ -493,7 +527,13 @@ export const GameScreen: React.FC<Props> = ({ surahName, initialVerse = 1, endVe
   const currentQuestion = levelData.questions[currentQuestionIdx];
 
   if (!currentQuestion) {
-    return null; // Safety guard for batch transitions
+    // Transient: index between batches, or the instant before the safety-net effect
+    // completes the level. Show the loader rather than a blank void.
+    return (
+      <div className="fixed inset-0 bg-slate-900 bg-ambient flex flex-col items-center justify-center text-white z-50">
+        <Loader2 className="w-12 h-12 animate-spin text-arcade-cyan" />
+      </div>
+    );
   }
 
   if (gameMode === 'SURF') {
