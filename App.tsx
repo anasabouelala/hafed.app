@@ -72,10 +72,10 @@ const App: React.FC = () => {
 
   const isPremium = user?.isAdmin === true;
   const isPlayingOrDiagnostic = appState === GameState.PLAYING || appState === GameState.DIAGNOSTIC;
-  // Time-based free trial (2 days). The clock is the account's created_at (guests fall back
-  // to a device timestamp). Premium users are exempt.
-  const trialEnded = !isPremium && trialService.isEnded(user?.createdAt);
-  const trialDaysLeft = trialService.daysLeft(user?.createdAt);
+  // Time-based free trial (2 days). The clock is a device-local first-seen timestamp — a
+  // fresh 2 days for everyone (new or existing). Premium users are exempt.
+  const trialEnded = !isPremium && trialService.isEnded();
+  const trialDaysLeft = trialService.daysLeft();
   // Permanent header once the trial ends (everywhere except active gameplay); during the
   // active trial it's a gentle "days left" nudge shown off the main menu.
   const showTrialBanner = !!user && !isPremium && !isPlayingOrDiagnostic && (trialEnded || appState !== GameState.MENU);
@@ -254,7 +254,7 @@ const App: React.FC = () => {
     mode: GameMode = 'CLASSIC',
     config?: any,
   ) => {
-    if (!isPremium && trialService.isEnded(user?.createdAt)) {
+    if (!isPremium && trialService.isEnded()) {
       setPaywallReason('trial');
       setShowPaywall(true);
       return;
@@ -264,10 +264,10 @@ const App: React.FC = () => {
     setSelectedGameMode(mode);
     setGameConfig(config || {});
     setAppState(GameState.PLAYING);
-  }, [isPremium, user]);
+  }, [isPremium]);
 
   const handleStartDiagnostic = useCallback((surah: string, startVerse: number = 1, endVerse?: number) => {
-    if (!isPremium && trialService.isEnded(user?.createdAt)) {
+    if (!isPremium && trialService.isEnded()) {
       setPaywallReason('trial');
       setShowPaywall(true);
       return;
@@ -275,7 +275,7 @@ const App: React.FC = () => {
     setSelectedSurah(surah);
     setVerseRange({ start: startVerse, end: endVerse });
     setAppState(GameState.DIAGNOSTIC);
-  }, [isPremium, user]);
+  }, [isPremium]);
 
   const handleDiagnosticComplete = useCallback((surah: string, startVerse: number, endVerse?: number) => {
     setMenuInitialState({ step: 'SELECT_MODE', surah, range: { start: startVerse, end: endVerse } });
