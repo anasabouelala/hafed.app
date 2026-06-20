@@ -82,12 +82,12 @@ export const QuizGame: React.FC<Props> = ({ question, onAnswer }) => {
             <div className="w-full flex flex-col lg:flex-row gap-8 h-full min-h-0 relative">
 
                 {/* Question Area */}
-                <div className="flex-1 flex flex-col gap-6 min-h-0 z-10">
+                <div className="flex-1 flex flex-col gap-4 min-h-0 z-10">
                     <motion.div
                         initial={{ scale: 0.95, opacity: 0, y: 10 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         key={question.id}
-                        className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-700/50 p-8 md:p-10 rounded-[2rem] relative overflow-hidden shadow-2xl shrink-0 group ring-1 ring-white/5"
+                        className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-700/50 p-5 md:p-6 rounded-[2rem] relative overflow-hidden shadow-2xl shrink-0 group ring-1 ring-white/5"
                     >
                         {/* Subtle Background Pattern */}
                         <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] mix-blend-overlay pointer-events-none" />
@@ -98,7 +98,7 @@ export const QuizGame: React.FC<Props> = ({ question, onAnswer }) => {
                                     question.quizSubType === 'PUZZLE' ? 'PUZZLE MODE' : 'QUESTION'}
                             </span>
 
-                            <h2 className="text-xl md:text-3xl font-arabic text-white leading-[1.8] mb-6 rtl-text drop-shadow-md text-balance">
+                            <h2 className="text-lg md:text-2xl font-arabic text-white leading-[1.7] mb-4 rtl-text drop-shadow-md text-balance">
                                 {question.prompt}
                             </h2>
 
@@ -118,9 +118,9 @@ export const QuizGame: React.FC<Props> = ({ question, onAnswer }) => {
                                     <motion.div
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
-                                        className="bg-slate-950/30 p-6 rounded-2xl border border-white/5 text-center backdrop-blur-sm"
+                                        className="bg-slate-950/30 p-4 rounded-2xl border border-white/5 text-center backdrop-blur-sm"
                                     >
-                                        <p className="font-arabic text-2xl md:text-3xl text-emerald-100/90 rtl-text leading-[2]">
+                                        <p className="font-arabic text-xl md:text-2xl text-emerald-100/90 rtl-text leading-loose">
                                             "{question.arabicText}"
                                         </p>
                                     </motion.div>
@@ -129,8 +129,8 @@ export const QuizGame: React.FC<Props> = ({ question, onAnswer }) => {
                         </div>
                     </motion.div>
 
-                    {/* Options Grid */}
-                    <div className={`grid gap-4 w-full overflow-y-auto custom-scrollbar pb-6 pr-2 ${question.quizSubType === 'CONNECTION' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                    {/* Options Grid — fills remaining space and scrolls within bounds so options stay visible */}
+                    <div className={`grid gap-3 w-full flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-4 pr-2 ${question.quizSubType === 'CONNECTION' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                         {shuffledOptions.map((option, idx) => {
                             const isSelected = selectedOption === option;
                             const isCorrect = option === question.correctAnswer;
@@ -161,8 +161,8 @@ export const QuizGame: React.FC<Props> = ({ question, onAnswer }) => {
                                     onClick={() => handleOptionClick(option)}
                                     disabled={isAnswered}
                                     className={`
-                                        relative w-full p-5 rounded-2xl border backdrop-blur-md transition-all duration-300 group
-                                        flex items-center justify-between min-h-[72px] text-right
+                                        relative w-full p-4 rounded-2xl border backdrop-blur-md transition-all duration-300 group
+                                        flex items-center justify-between min-h-[56px] text-right
                                         ${cardStyle}
                                     `}
                                 >
